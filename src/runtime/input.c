@@ -243,6 +243,27 @@ static void click(HWND h, LPARAM lp) {
  * player does. If the dialog is still open and nothing new opened 3 s later,
  * send the BN_CLICKED a button sends its parent. Returns the method used, or
  * NULL if the dialog never opened. */
+/* press()'s view of the dialog's thread (in-process thread hooks): the
+ * button-up it takes off its queue, and the BN_CLICKED the button sends. */
+static HWND g_watch_btn, g_watch_dlg;
+static int g_watch_ctrl;
+static volatile LONG g_watch_up, g_watch_cmd;
+
+static LRESULT CALLBACK watch_getmsg(int code, WPARAM wp, LPARAM lp) {
+    const MSG* m = (const MSG*)lp;
+    if (code >= 0 && wp == PM_REMOVE && m->message == WM_LBUTTONUP && m->hwnd == g_watch_btn)
+        InterlockedIncrement(&g_watch_up);
+    return CallNextHookEx(NULL, code, wp, lp);
+}
+
+static LRESULT CALLBACK watch_callwnd(int code, WPARAM wp, LPARAM lp) {
+    const CWPSTRUCT* m = (const CWPSTRUCT*)lp;
+    if (code >= 0 && m->message == WM_COMMAND && m->hwnd == g_watch_dlg &&
+        LOWORD(m->wParam) == g_watch_ctrl && HIWORD(m->wParam) == BN_CLICKED)
+        InterlockedIncrement(&g_watch_cmd);
+    return CallNextHookEx(NULL, code, wp, lp);
+}
+
 static const char* press(int dlg, int ctrl, LONG* shift) {
     DWORD w0 = GetTickCount();
     HWND d;
@@ -268,13 +289,32 @@ static const char* press(int dlg, int ctrl, LONG* shift) {
     PostMessageA(c, WM_MOUSEMOVE, 0, MAKELPARAM(local.x, local.y));
     Sleep(200);
     LONG opens = g_dialogs_opened;
+    /* Watch the dialog's thread: when it takes the click's button-up off its
+     * queue, and whether the button then sends its BN_CLICKED. Only a click
+     * that was handled and sent nothing gets the BN_CLICKED by hand. A fixed
+     * wait sent it to clicks that were merely queued behind a busy game, and
+     * the button fired twice: two Start Game presses hung a skirmish while it
+     * looked for start positions for players that were not there. */
+    DWORD tid = GetWindowThreadProcessId(d, NULL);
+    g_watch_btn = c, g_watch_dlg = d, g_watch_ctrl = ctrl;
+    LONG up0 = g_watch_up, cmd0 = g_watch_cmd;
+    HHOOK hg = SetWindowsHookExA(WH_GETMESSAGE, watch_getmsg, NULL, tid);
+    HHOOK hc = SetWindowsHookExA(WH_CALLWNDPROC, watch_callwnd, NULL, tid);
     click(c, MAKELPARAM(local.x, local.y));
-    for (int i = 0; i < 30; i++) {
-        if (!IsWindow(d) || g_dialogs_opened != opens) return "click";
-        Sleep(100);
+    const char* how = NULL;
+    DWORD t_up = 0;
+    for (DWORD t0 = GetTickCount(); !how; Sleep(100)) {
+        if (!t_up && g_watch_up != up0) t_up = GetTickCount();
+        if (!IsWindow(d) || g_dialogs_opened != opens || g_watch_cmd != cmd0) how = "click";
+        else if (!t_up && GetTickCount() - t0 > 120000) how = "click, never taken";
+        else if (t_up && GetTickCount() - t_up > 2000) {
+            PostMessageA(d, WM_COMMAND, MAKEWPARAM(ctrl, BN_CLICKED), (LPARAM)c);
+            how = "BN_CLICKED";
+        }
     }
-    PostMessageA(d, WM_COMMAND, MAKEWPARAM(ctrl, BN_CLICKED), (LPARAM)c);
-    return "BN_CLICKED";
+    UnhookWindowsHookEx(hg);
+    UnhookWindowsHookEx(hc);
+    return how;
 }
 
 /* Pick item N of a list or combo box: set the selection and send the parent
