@@ -1,0 +1,60 @@
+# Build output (build-farm*: recomp-netlab's, docs/netlab.md)
+build/
+build-farm*/
+out/
+cmake-build-*/
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+
+# IDE
+.vs/
+.vscode/
+*.user
+
+# Python
+__pycache__/
+*.pyc
+
+# --- Retail game files: NOT redistributed (REPO_RULES section 3) ---
+# Command & Conquer: Tiberian Sun / Firestorm (c) 1999-2000 Westwood Studios / EA.
+# Bring your own copy; Setup.cmd copies it into game/.
+game/
+original/
+*.exe
+*.EXE
+*.dll
+*.DLL
+*.mix
+*.vqa
+*.VQA
+*.dsk
+*.DSK
+*.MIX
+*.mmx
+*.yro
+*.iso
+*.zip
+
+# Generated from the binary, never committed: the lifted C, the catalog,
+# RTTI/vtable dumps and every other analysis of Game.exe.
+src/recomp/gen/
+work/
+analysis/
+
+# Recordings and logs of runs
+*.mp4
+*.log
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Made by Setup.cmd
+Tiberian Sun (recomp).cmd
+build-trace/
+
+# LAN game frames (tools/lan/*.args)
+lan-frames/
