@@ -26,7 +26,7 @@ import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# TS_EXE: another build of the host to test (netlab's build-farm/ts.exe, an A/B slot).
+# TS_EXE: another build of the host to test (a clang-cl build, an A/B variant).
 HOST = os.environ.get('TS_EXE') or os.path.join(ROOT, 'build', 'ts.exe')
 GEN = os.path.join(ROOT, 'src', 'recomp', 'gen')
 BASELINE = os.path.join(ROOT, 'conformance.json')

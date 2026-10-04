@@ -21,7 +21,8 @@ in order; each is done when its check is in the suite or the docs.
 6. **Speed at 4K**: the battlefield is drawn in software into the locked
    primary at about 3 frames a second at 3840x2160 (docs/hires.md).
 7. **Setup.cmd end to end** from a clean folder.
-8. **recomp-netlab**: a recipe and a LAN scenario, as redalert2-recomp has.
+8. **LAN multiplayer**: TS against TS between two PCs, scripted on both
+   sides, as redalert2-recomp has.
 9. **Toolkit**: the catalog misses code addresses that only appear as
    immediates (bringup.md 5); the native bridge leaves stale game frames
    where Windows' would be (bringup.md 4). Both belong in pcrecomp.

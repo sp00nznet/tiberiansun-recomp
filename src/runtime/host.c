@@ -994,7 +994,7 @@ int main(int argc, char** argv) {
     setvbuf(stderr, NULL, _IONBF, 0);
     /* --args FILE: more arguments, whitespace-separated, # to the end of a
      * line is a comment. A script that is a list of presses, for a caller
-     * that can pass only one word (netlab's role settings). */
+     * that can pass only one word (a launcher's setting, a scheduled task). */
     for (int i = 1; i + 1 < argc; i++) {
         if (strcmp(argv[i], "--args")) continue;
         static char text[16384];

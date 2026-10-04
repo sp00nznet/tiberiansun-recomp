@@ -1,6 +1,5 @@
-# Build output (build-farm*: recomp-netlab's, docs/netlab.md)
+# Build output
 build/
-build-farm*/
 out/
 cmake-build-*/
 *.obj
