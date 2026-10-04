@@ -10,8 +10,11 @@ in order; each is done when its check is in the suite or the docs.
    `skirmish-build`). Found so far: band selection and move orders by mouse
    work; the MCV is placed (a probe on its Unlimbo), but the start differs
    per run (the random seed is not fixed) and move orders print no event
-   line, so the case needs a fixed seed or a way to find the MCV, and a
-   check other than the event log.
+   line. Band-selecting everything and pressing D deploys what can deploy
+   (`Adding event DEPLOY`: the Juggernauts became artillery), but no MCV is
+   among the starting units, on the lift or on the shipping code, though the
+   unit generator places one (`0x005DEC07`, a probe on its Unlimbo); where it
+   goes is the next thing to find.
 3. **The campaigns**: GDI and Nod for Tiberian Sun and for Firestorm, each
    to its first mission in game.
 4. **The rest of the menus**: Options, Load Mission with a save present,
