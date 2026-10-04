@@ -97,4 +97,7 @@ The host now owns the game's multimedia timers (`shim_timeSetEvent`,
 waits. The campaign cases three at a time went from a crash in one or two of
 five each round to 15 of 15. (DirectDraw is also asked for
 `DDSCL_MULTITHREADED` now, since the presenter and the recorder lock the
-primary from their own threads; that alone did not stop the crashes.)
+primary from their own threads; that alone did not stop the crashes.) The
+DirectSound crash has not come back; the display driver's has, once in a
+later full run, during playback rather than at the close, and is open
+(ROADMAP).
