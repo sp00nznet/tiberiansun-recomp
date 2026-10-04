@@ -13,7 +13,7 @@ host, the presenter, the scripted input and the test tools come from
 redalert2-recomp; everything tied to an address was found again in this exe
 ([RECON.md](docs/RECON.md)).
 
-## Status: **bring-up, in game.** The whole exe lifts with 0 errors; both games' main menus, the skirmish setup screen and a skirmish run, from 640x400 to 3840x2160, checked by a scripted suite.
+## Status: **bring-up, playable.** The whole exe lifts with 0 errors; both games' main menus, skirmishes from 640x400 to 3840x2160, all four campaigns to their first mission with their movies, and building a base, checked by a scripted suite.
 
 | Stage | State |
 |---|---|
@@ -21,9 +21,9 @@ redalert2-recomp; everything tied to an address was found again in this exe
 | RTTI class recovery | 807 classes, 895 vtables, 5,226 virtual methods |
 | Function catalog (`disasm32`) | 18,552 functions, 92.0% of `.text` |
 | Lift (`run_lift.py --all`) | 18,559 functions, 3.9M lines of C, **0 lift errors**; 35 patches |
-| Host (`build/ts.exe`, 32-bit, pcrecomp `native32`) | the logos, the Tiberian Sun / Firestorm choice, both main menus, the skirmish setup, a skirmish in game ([bringup.md](docs/bringup.md)) |
+| Host (`build/ts.exe`, 32-bit, pcrecomp `native32`) | the logos, the Tiberian Sun / Firestorm choice, both main menus, skirmishes, the GDI and Nod campaigns of both games with their VQA movies, and building and training in a mission ([bringup.md](docs/bringup.md)) |
 | High resolution | 720p, 1080p, 1440p and 4K in game; above 1080 lines the sidebar needed a fix ([hires.md](docs/hires.md)) |
-| Playtest suite (`tools/playtest.py`) | **9 of 9 passing** ([testing.md](docs/testing.md)) |
+| Playtest suite (`tools/playtest.py`) | **14 of 14 passing**: menus, skirmish 640x400 to 4K, the four campaigns, a power plant and a Hand of Nod built and placed and an infantryman trained ([testing.md](docs/testing.md)) |
 | Conformance (`tools/conformance.py`) | **8/8** boot milestones to the choice screen, lift 0 errors |
 | Presenter (the default display) | the game in its own Direct3D 11 window, from redalert2-recomp: sharp scaling, blurred bars, clicks mapped into the game; checked with the menus ([presenter.md](docs/presenter.md)) |
 | HD voxels | not yet: redalert2-recomp's patches have to be found again in this renderer |
@@ -42,12 +42,15 @@ In the presenter's window (a 2338x1754 window on a high-DPI screen; the
 
 Rendered by the recompiled game and recorded headlessly by the playtest
 suite: the choice between the two games, Firestorm's main menu, the skirmish
-setup and a skirmish.
+setup and a skirmish; the first Nod mission, with a power plant and a Hand of
+Nod built by the suite; Firestorm's first GDI mission and its opening movie.
 
 | | |
 |---|---|
 | ![Choice](docs/screenshots/choice.png) | ![Firestorm main menu](docs/screenshots/menu-firestorm.png) |
 | ![Skirmish setup](docs/screenshots/skirmish-setup.png) | ![Skirmish](docs/screenshots/skirmish.png) |
+| ![Nod campaign](docs/screenshots/campaign-nod.png) | ![Built by the suite](docs/screenshots/campaign-build.png) |
+| ![Firestorm GDI campaign](docs/screenshots/campaign-firestorm-gdi.png) | ![Firestorm's opening](docs/screenshots/firestorm-intro.png) |
 
 ## Building
 

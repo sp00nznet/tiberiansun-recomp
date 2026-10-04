@@ -354,8 +354,12 @@ static void mode_format(DDPIXELFORMAT* pf) {
 }
 
 static HRESULT WINAPI hl_SetCooperativeLevel(IDirectDraw* dd, HWND h, DWORD flags) {
-    HRESULT hr = g_real_coop(dd, h, DDSCL_NORMAL);
-    fprintf(stderr, "[headless] SetCooperativeLevel(0x%lX) -> NORMAL: 0x%08lX\n", flags, hr);
+    /* Multithreaded: the presenter and the recorder lock the primary from
+     * their own threads while the game draws on its. Without the flag
+     * DirectDraw takes no lock of its own, and under load the display driver
+     * faulted inside one of the game's Locks (docs/bringup.md). */
+    HRESULT hr = g_real_coop(dd, h, DDSCL_NORMAL | DDSCL_MULTITHREADED);
+    fprintf(stderr, "[headless] SetCooperativeLevel(0x%lX) -> NORMAL|MULTITHREADED: 0x%08lX\n", flags, hr);
     return hr;
 }
 
@@ -398,8 +402,23 @@ static dds_unlock_t g_real_unlock;
  * this, a 4K skirmish saw 2,806 of the game's Locks come back
  * DDERR_SURFACEBUSY. So the game's lock of the primary holds the host's
  * primary lock from Lock to Unlock, and a copy waits for it. */
+/* The Lock in flight, for a crash report (the display driver faulted inside
+ * the game's Locks under load; docs/bringup.md). */
+static volatile struct { void* s; RECT r; int has_r; DWORD flags, size, caps, w, h; } g_last_lock;
+
 static HRESULT WINAPI hl_Lock(IDirectDrawSurface* s, LPRECT r, LPDDSURFACEDESC d, DWORD flags, HANDLE h) {
     int primary = s == g_primary;
+    {
+        DDSURFACEDESC sd;
+        memset(&sd, 0, sizeof sd);
+        sd.dwSize = sizeof sd;
+        s->lpVtbl->GetSurfaceDesc(s, &sd);
+        g_last_lock.s = s, g_last_lock.has_r = r != NULL, g_last_lock.flags = flags;
+        g_last_lock.size = d ? d->dwSize : 0, g_last_lock.caps = sd.ddsCaps.dwCaps;
+        g_last_lock.w = sd.dwWidth, g_last_lock.h = sd.dwHeight;
+        if (r) g_last_lock.r.left = r->left, g_last_lock.r.top = r->top, g_last_lock.r.right = r->right,
+               g_last_lock.r.bottom = r->bottom;
+    }
     if (ddtrace() && InterlockedIncrement(&g_ddtrace_n) <= 60)
         fprintf(stderr, "[dd] Lock %p%s rect %s flags 0x%lX\n", (void*)s, primary ? " (primary)" : "",
                 r ? "yes" : "none", flags);
@@ -810,6 +829,65 @@ static void shim_DialogBoxParamA(void) {
     g_esp += 4 + 5 * 4;
 }
 
+/* Multimedia timers. A guest timer callback runs on winmm's thread but only
+ * once it gets the machine, which the game's thread gives up at its next
+ * native call: timeKillEvent itself. So a callback that was already due ran
+ * after the kill, after the game had deleted the critical section and freed
+ * the sound buffer it uses: closing a movie with Escape faulted in DirectSound
+ * and in the display driver under load (docs/bringup.md). On Windows the
+ * callback simply runs on to its end on its own thread. Here each timer
+ * counts its callbacks in flight, and timeKillEvent returns once they are
+ * done, with the machine given up while it waits. */
+#define MAX_TIMERS 32
+static struct { uint32_t proc, user; volatile UINT id; volatile LONG inflight; volatile DWORD in_thread; } g_timers[MAX_TIMERS];
+
+static void CALLBACK timer_tramp(UINT id, UINT msg, DWORD_PTR user, DWORD_PTR d1, DWORD_PTR d2) {
+    int i = (int)user;
+    InterlockedIncrement(&g_timers[i].inflight);
+    if (g_timers[i].proc) {
+        g_timers[i].in_thread = GetCurrentThreadId();
+        ((LPTIMECALLBACK)(uintptr_t)g_timers[i].proc)(id, msg, g_timers[i].user, d1, d2);   /* the guest's */
+        g_timers[i].in_thread = 0;
+    }
+    InterlockedDecrement(&g_timers[i].inflight);
+}
+
+static void shim_timeSetEvent(void) {
+    UINT flags = ARG(4);
+    int i = -1;
+    if (!(flags & (TIME_CALLBACK_EVENT_SET | TIME_CALLBACK_EVENT_PULSE)))   /* a callback, not an event */
+        for (int k = 0; k < MAX_TIMERS && i < 0; k++)
+            if (!g_timers[k].proc && !g_timers[k].inflight) i = k;
+    if (i < 0) {
+        g_eax = timeSetEvent(ARG(0), ARG(1), (LPTIMECALLBACK)(uintptr_t)ARG(2), ARG(3), flags);
+    } else {
+        g_timers[i].proc = ARG(2), g_timers[i].user = ARG(3);
+        g_eax = g_timers[i].id = timeSetEvent(ARG(0), ARG(1), timer_tramp, (DWORD_PTR)i, flags);
+        if (!g_eax) g_timers[i].proc = 0;
+    }
+    g_esp += 4 + 5 * 4;
+}
+
+static void shim_timeKillEvent(void) {
+    UINT id = ARG(0);
+    int i = -1;
+    for (int k = 0; k < MAX_TIMERS && i < 0; k++)
+        if (g_timers[k].proc && g_timers[k].id == id) i = k;
+    mach_leave();
+    MMRESULT r = timeKillEvent(id);
+    /* not when the callback kills its own timer: it is the one in flight */
+    if (i >= 0 && g_timers[i].in_thread != GetCurrentThreadId())
+        while (g_timers[i].inflight) Sleep(1);
+    mach_enter();
+    if (i >= 0) g_timers[i].proc = 0, g_timers[i].id = 0;
+    g_eax = r;
+    g_esp += 4 + 1 * 4;
+}
+
+#define TIMER_SHIMS \
+    { "timeSetEvent", shim_timeSetEvent }, \
+    { "timeKillEvent", shim_timeKillEvent }
+
 #define GUEST_SHIMS \
     { "FindResourceA", shim_FindResourceA }, \
     { "LoadResource", shim_LoadResource }, \
@@ -820,10 +898,11 @@ static void shim_DialogBoxParamA(void) {
     { "GetModuleFileNameA", shim_GetModuleFileNameA }, \
     { "GetCommandLineA", shim_GetCommandLineA }
 
-static native32_shim_t g_shims[] = { GUEST_SHIMS };
+static native32_shim_t g_shims[] = { GUEST_SHIMS, TIMER_SHIMS };
 
 static native32_shim_t g_headless_shims[] = {
     GUEST_SHIMS,
+    TIMER_SHIMS,
     { "MessageBoxA", shim_MessageBoxA },
     { "CreateWindowExA", shim_CreateWindowExA },
     { "ShowWindow", shim_ShowWindow },
@@ -938,6 +1017,19 @@ static LONG CALLBACK crash(EXCEPTION_POINTERS* ep) {
     if (InterlockedExchange(&once, 1)) TerminateProcess(GetCurrentProcess(), 3);
     crash_emit("\n=== fault 0x%08lX at 0x%p, thread %lu ===\n", r->ExceptionCode,
                r->ExceptionAddress, GetCurrentThreadId());
+    {   /* whose code it was: a native fault names its DLL */
+        HMODULE m = NULL;
+        char path[MAX_PATH] = "";
+        if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                               (LPCSTR)r->ExceptionAddress, &m) && GetModuleFileNameA(m, path, sizeof path))
+            crash_emit("  in %s at +0x%lX\n", path, (unsigned long)((uintptr_t)r->ExceptionAddress - (uintptr_t)m));
+        else
+            crash_emit("  in no module (heap or generated code)\n");
+    }
+    crash_emit("  last Lock: surface %p %lux%lu caps 0x%lX flags 0x%lX desc size %lu rect %s%ld,%ld-%ld,%ld\n",
+               g_last_lock.s, g_last_lock.w, g_last_lock.h, g_last_lock.caps, g_last_lock.flags, g_last_lock.size,
+               g_last_lock.has_r ? "" : "(none) ", g_last_lock.r.left, g_last_lock.r.top, g_last_lock.r.right,
+               g_last_lock.r.bottom);
     if (r->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && r->NumberParameters >= 2) {
         ULONG_PTR op = r->ExceptionInformation[0];
         uint32_t at = (uint32_t)r->ExceptionInformation[1];

@@ -6,6 +6,10 @@ versions follow [SemVer](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- All four campaigns to their first mission (Tiberian Sun and Firestorm,
+  GDI and Nod), their VQA movies included, and `campaign-build`: a power
+  plant and a Hand of Nod built and placed and a light infantry trained on
+  the first Nod mission.
 - The recompilation: `Game.exe` catalogued (18,552 functions) and lifted
   (18,559, 0 errors) on pcrecomp, with redalert2-recomp's host, presenter,
   scripted input and test tools.
@@ -21,6 +25,12 @@ versions follow [SemVer](https://semver.org/).
   report every call.
 
 ### Fixed
+- Crashes under load as a movie closed (in DirectSound, or in the display
+  driver): a timer callback ran after its timer was killed. The host owns
+  the game's multimedia timers and waits out callbacks in flight
+  (docs/bringup.md 8). DirectDraw is asked for `DDSCL_MULTITHREADED`.
+- The crash report names the module a native fault is in, and the last
+  surface Lock.
 - A crash on about a quarter of runs after the first mouse move: a menu
   gadget's rect the game never initialised (docs/bringup.md 4).
 - The skirmish screen's window procedure, never lifted (bringup.md 5), and

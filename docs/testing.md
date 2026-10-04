@@ -31,6 +31,8 @@ What the game logs is how a case knows where it is:
 | the choice screen | `Theme::PlaySong(30)` |
 | a main menu is up | `VQ audio handler closed OK` (the movie into it ends; there is no line of its own) |
 | in game | `Tooltips are on.` |
+| a movie starts | `Opening VQ audio handler` |
+| an order | `Adding event PRODUCE`, `PLACE`, `DEPLOY`, `SCATTER` (move orders print none) |
 
 ## The cases
 
@@ -41,6 +43,8 @@ What the game logs is how a case knows where it is:
 | `menu-skirmish` | the skirmish setup dialog opens and Cancel leaves it |
 | `skirmish-start` | a skirmish with the defaults: in game, the picture moving |
 | `skirmish-720p` .. `skirmish-4k` | the same at each resolution (docs/hires.md) |
+| `campaign-fs-gdi`, `campaign-fs-nod`, `campaign-ts-gdi`, `campaign-ts-nod` | each campaign to its first mission: the campaign dialog (`0x94`, its list), OK, Escape once the first movie opens |
+| `campaign-build` | on the first Nod mission: a power plant and a Hand of Nod built from the sidebar and placed, then a light infantry; at least 3 `PRODUCE` and 2 `PLACE` events |
 
 "The picture moving" counts distinct checksums the recorder prints every 100
 recorded frames; at 4K the game draws about 3 frames a second, so those cases

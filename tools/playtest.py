@@ -168,6 +168,44 @@ case('menu-skirmish', firestorm().click(*MENU_SKIRMISH, after=4).press(SKIRMISH,
 # A skirmish with the defaults: in game, the picture moving.
 case('skirmish-start', firestorm().click(*MENU_SKIRMISH, after=4).press(SKIRMISH, 'OK'), 90,
      dialogs=[SKIRMISH], ingame=True)
+# Each campaign to its first mission: the campaign screen (a dialog, its
+# list: 0 the GDI act, 1 the Nod act), OK, then Escape once the first movie
+# opens skips the movies.
+CAMPAIGN, CAMPAIGN_LIST = 0x94, 1109
+for game, choice in (('fs', CHOICE_FS), ('ts', CHOICE_TS)):
+    for n, side in ((0, 'gdi'), (1, 'nod')):
+        case('campaign-%s-%s' % (game, side),
+             S().click(*choice, after=2).waitlog(MENU_OPEN).click(*NEW_CAMPAIGN, after=4)
+             .select(CAMPAIGN, CAMPAIGN_LIST, n).press(CAMPAIGN, 'OK')
+             .waitlog('Opening VQ audio handler').key('0x1B', after=2).waitlog('Tooltips are on.'),
+             150, dialogs=[CAMPAIGN], ingame=True)
+# Building, on the first Nod mission's base: a power plant and a Hand of Nod
+# from the sidebar, each placed by trying spots around the base (Home centres
+# the view on it), then a light infantry. Checked in the game's event log.
+# The base sits at the view's left edge: the spots start beside it.
+PLACES = [(60, 300), (110, 300), (60, 360), (150, 370), (40, 230), (120, 250), (190, 330),
+          (170, 250), (236, 300), (150, 160), (300, 250), (300, 300), (236, 360), (340, 340)]
+PP, HAND, LIGHT_INF = (527, 245), (527, 300), (590, 195)
+
+
+def place(script):
+    script = script.key('0x24', after=1)           # Home: the view on the base
+    for x, y in PLACES:
+        script = script.click(x, y, after=1)
+    return script
+
+
+case('campaign-build',
+     place(place(S().click(*CHOICE_TS, after=2).waitlog(MENU_OPEN).click(*NEW_CAMPAIGN, after=4)
+                 .select(CAMPAIGN, CAMPAIGN_LIST, 1).press(CAMPAIGN, 'OK')
+                 .waitlog('Opening VQ audio handler').key('0x1B', after=2).waitlog('Tooltips are on.')
+                 .click(*PP, after=3)                          # power plant
+                 .click(*PP, after=30))                        # ready: pick it up
+           .click(*HAND, after=3)                              # Hand of Nod
+           .click(*HAND, after=60))                            # ready: pick it up
+     .click(*LIGHT_INF, after=3),                              # a light infantry
+     240, dialogs=[CAMPAIGN], ingame=True, log={'Adding event PRODUCE': 3, 'Adding event PLACE': 2})
+
 # High resolution: SUN.INI [Video], what the presenter's settings menu writes.
 for w, h, tag in ((1280, 720, '720p'), (1920, 1080, '1080p'), (2560, 1440, '1440p'), (3840, 2160, '4k')):
     case('skirmish-' + tag, firestorm((w, h)).click(*MENU_SKIRMISH, after=4).press(SKIRMISH, 'OK'), 180,

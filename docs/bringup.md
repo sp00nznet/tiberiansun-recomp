@@ -74,3 +74,27 @@ faulted. The shim unprotects that one dword around the edit.
 ## 7. The sidebar above 1080 lines
 
 See [hires.md](hires.md): 4K faulted laying out the sidebar.
+
+## 8. A timer callback after its timer was killed
+
+Under load (other runs on the machine), the campaign cases crashed now and
+then while their first movie closed: in the display driver
+(`nvd3dum.dll`) inside one of the game's surface Locks, or in DirectSound,
+called from `sub_004072D0`, the movie's audio timer callback reading its
+sound buffer's position. Escape closes the movie: the game calls
+`timeKillEvent`, deletes the critical section and frees the buffer.
+
+On Windows a callback that is already running finishes on its own thread
+while the game's thread goes on. Here a guest callback runs on winmm's
+thread only once it gets the machine, and the game's thread gives the
+machine up at its next native call, which is `timeKillEvent` itself. A
+callback that was already due ran after the kill, against freed objects, and
+the busier the machine, the wider that window.
+
+The host now owns the game's multimedia timers (`shim_timeSetEvent`,
+`shim_timeKillEvent`): each counts its callbacks in flight, and
+`timeKillEvent` returns once they are done, giving up the machine while it
+waits. The campaign cases three at a time went from a crash in one or two of
+five each round to 15 of 15. (DirectDraw is also asked for
+`DDSCL_MULTITHREADED` now, since the presenter and the recorder lock the
+primary from their own threads; that alone did not stop the crashes.)

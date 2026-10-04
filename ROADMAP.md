@@ -6,8 +6,9 @@ in order; each is done when its check is in the suite or the docs.
 1. **The presenter's settings** in a window: F10's resolution entry into a
    skirmish at that size, fullscreen, the scalings. (The window, its
    scaling, bars and click mapping are checked: docs/presenter.md.)
-2. **Play, not just reach**: deploy, build and train in a skirmish (RA2's
-   `skirmish-build`). Found so far: band selection and move orders by mouse
+2. **Play, not just reach.** Done on the first Nod mission
+   (`campaign-build`: a power plant, a Hand of Nod, a light infantry). Left:
+   the same in a skirmish (RA2's `skirmish-build`). Found so far: band selection and move orders by mouse
    work; the MCV is placed (a probe on its Unlimbo), but the start differs
    per run (the random seed is not fixed) and move orders print no event
    line. Band-selecting everything and pressing D deploys what can deploy
@@ -18,8 +19,8 @@ in order; each is done when its check is in the suite or the docs.
    everything selected orders it to deploy, but it has no room; scatter (X)
    and moving the group did not clear enough. Next: select the MCV alone
    (its cell from the generator, or SelectSameType), on open ground.
-3. **The campaigns**: GDI and Nod for Tiberian Sun and for Firestorm, each
-   to its first mission in game.
+3. **The campaigns.** Done to the first mission, all four
+   (`campaign-*`). Next: a mission played to its win.
 4. **The rest of the menus**: Options, Load Mission with a save present,
    LAN, World Domination Tour as far as it goes without servers.
 5. **HD voxels**: redalert2-recomp's four half-pixel passes, found again in
@@ -35,3 +36,12 @@ in order; each is done when its check is in the suite or the docs.
    `--original` needs pcrecomp #51 (the image loader cut `.text` at its
    VirtualSize, and this exe has a patch's code past it) to reach a skirmish.
 10. **Release**: v0.1.0, private.
+
+## Open
+
+- Under load, now and then (1 of 14 in a full suite run three at a time),
+  the display driver (`nvd3dum.dll`) faults inside a Lock the game makes on
+  the movie's 640x400 system-memory surface (`DDLOCK_WAIT`, no rect) while a
+  campaign's first movie plays. The crash report records the Lock in flight.
+  The timer fix (bringup.md 8) cured the DirectSound crash at the same
+  moment, not this one.
