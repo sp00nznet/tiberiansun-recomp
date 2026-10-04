@@ -25,7 +25,7 @@ redalert2-recomp; everything tied to an address was found again in this exe
 | High resolution | 720p, 1080p, 1440p and 4K in game; above 1080 lines the sidebar needed a fix ([hires.md](docs/hires.md)) |
 | Playtest suite (`tools/playtest.py`) | **9 of 9 passing** ([testing.md](docs/testing.md)) |
 | Conformance (`tools/conformance.py`) | **8/8** boot milestones to the choice screen, lift 0 errors |
-| Presenter | carried over from redalert2-recomp (scaling, F10 settings, the game's resolution); not yet checked against Tiberian Sun in a window |
+| Presenter (the default display) | the game in its own Direct3D 11 window, from redalert2-recomp: sharp scaling, blurred bars, clicks mapped into the game; checked with the menus ([presenter.md](docs/presenter.md)) |
 | HD voxels | not yet: redalert2-recomp's patches have to be found again in this renderer |
 
 Three walls so far, each in [bringup.md](docs/bringup.md): a gadget rect the
@@ -34,6 +34,11 @@ move), a window procedure the catalog missed, and dialog templates in a
 read-only resource DLL.
 
 ## Screenshots
+
+In the presenter's window (a 2338x1754 window on a high-DPI screen; the
+640x400 menu sharp-scaled, the bars a blur of the picture):
+
+![Presenter](docs/screenshots/presenter.jpg)
 
 Rendered by the recompiled game and recorded headlessly by the playtest
 suite: the choice between the two games, Firestorm's main menu, the skirmish

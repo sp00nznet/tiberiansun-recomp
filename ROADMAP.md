@@ -3,8 +3,9 @@
 Parity with [redalert2-recomp](https://github.com/sp00nznet/redalert2-recomp),
 in order; each is done when its check is in the suite or the docs.
 
-1. **The presenter, checked in a window**: scaling, F10 settings, the
-   game's resolution from the menu, the menus framed in a widescreen window.
+1. **The presenter's settings** in a window: F10's resolution entry into a
+   skirmish at that size, fullscreen, the scalings. (The window, its
+   scaling, bars and click mapping are checked: docs/presenter.md.)
 2. **Play, not just reach**: deploy, build and train in a skirmish, checked
    in the game's event log (RA2's `skirmish-build`); orders by mouse.
 3. **The campaigns**: GDI and Nod for Tiberian Sun and for Firestorm, each
