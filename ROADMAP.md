@@ -12,9 +12,12 @@ in order; each is done when its check is in the suite or the docs.
    per run (the random seed is not fixed) and move orders print no event
    line. Band-selecting everything and pressing D deploys what can deploy
    (`Adding event DEPLOY`: the Juggernauts became artillery), but no MCV is
-   among the starting units, on the lift or on the shipping code, though the
-   unit generator places one (`0x005DEC07`, a probe on its Unlimbo); where it
-   goes is the next thing to find.
+   among the starting units at first sight. It is there: the generator places
+   it (`0x005DEC07`, at a start waypoint) and it is the long vehicle with a
+   grey crane in the middle of the group, boxed in by infantry. D with
+   everything selected orders it to deploy, but it has no room; scatter (X)
+   and moving the group did not clear enough. Next: select the MCV alone
+   (its cell from the generator, or SelectSameType), on open ground.
 3. **The campaigns**: GDI and Nod for Tiberian Sun and for Firestorm, each
    to its first mission in game.
 4. **The rest of the menus**: Options, Load Mission with a save present,
