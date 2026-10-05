@@ -75,6 +75,13 @@ While HD voxels are on, the voxel cache is off (`0x006354EC` gives
 extra passes run only for an image not seen before, so nearly all come from
 memory.
 
-Not yet: shadows (a separate render, `0x00635E20`, still 1x) and the other
-voxel bodies through `0x004472C0` have their passes but not their records
-checked; voxel animations and debris.
+**Shadows** are a separate render (`0x00635E20`, from the shadow draw
+`0x00635860`, whose cache is off the same way), plotted by `0x00668A00` from
+an 8.8 start at `[esp+0x30]`/`[esp+0x32]` (patched at `0x00668A94`), and
+blitted onto the battlefield by `0x0047CC10` with the shadow converter. The
+2x shadow is Red Alert 2's: the four passes' union with its holes closed,
+darkened the way the 1x one is. Most of a shadow is under its unit; what
+shows at 2x is its edge.
+
+Not yet: the other voxel bodies through `0x004472C0` have their passes but
+their records are not checked; voxel animations and debris.

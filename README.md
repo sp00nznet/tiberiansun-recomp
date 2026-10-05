@@ -26,7 +26,7 @@ redalert2-recomp; everything tied to an address was found again in this exe
 | Playtest suite (`tools/playtest.py`) | **14 of 14 passing**: menus, skirmish 640x400 to 4K, the four campaigns, a power plant and a Hand of Nod built and placed and an infantryman trained ([testing.md](docs/testing.md)) |
 | Conformance (`tools/conformance.py`) | **8/8** boot milestones to the choice screen, lift 0 errors |
 | Presenter (the default display) | the game in its own Direct3D 11 window, from redalert2-recomp: sharp scaling, blurred bars, clicks mapped into the game; checked with the menus ([presenter.md](docs/presenter.md)) |
-| HD vehicles | units' bodies at 2x, Red Alert 2's four half-pixel passes found again in this renderer; shadows not yet ([voxels.md](docs/voxels.md)) |
+| HD vehicles | units and their shadows at 2x, Red Alert 2's four half-pixel passes found again in this renderer ([voxels.md](docs/voxels.md)) |
 
 Three walls so far, each in [bringup.md](docs/bringup.md): a gadget rect the
 game never initialised (a crash on a quarter of runs, from the first mouse

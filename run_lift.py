@@ -160,6 +160,18 @@ HD_VOXEL_PATCHES = {
     0x006522AA: _hd_copied(),
     0x006522FC: _hd_copy(),
     0x00652303: _hd_copied(),
+    # Shadows. 0x00635860 draws a unit's shadow from its own cache (key in
+    # ebx, [esp+0x58]); -1 renders and blits it every time. 0x00635E20
+    # renders it: sections, then the same finish stage (ecx = esp+0x28),
+    # whose shadow records are plotted by 0x00668A00 from an 8.8 start at
+    # [esp+0x30] (x) and [esp+0x32] (y) once both are stored; then it is
+    # blitted onto the battlefield by 0x0047CC10, the shadow converter in edx.
+    0x00635898: '{ extern int ts_vox_hd_on; if (ts_vox_hd_on) { ebx = 0xFFFFFFFFu; MEM32(esp + 0x58) = ebx; } } ' + TAG,
+    0x00668A94: ('{ extern int16_t ts_vox_dx, ts_vox_dy; '
+                 'MEM16(esp + 0x30) += ts_vox_dx; MEM16(esp + 0x32) += ts_vox_dy; } ' + TAG),
+    0x00635ECF: _hd_passes(0x28),
+    0x00635F6E: '{ extern void ts_vox_shadow_blit(uint32_t, uint32_t); ts_vox_shadow_blit(ecx, esp); } ' + TAG,
+    0x00635F6F: '{ extern void ts_vox_shadow_blitted(void); ts_vox_shadow_blitted(); } ' + TAG,
     # The same in 0x004472C0, the other voxel body draw.
     0x00447387: _hd_passes(0x34),
     0x0044741C: _hd_blit(),

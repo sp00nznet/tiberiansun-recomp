@@ -38,6 +38,7 @@
 #define VOX_COLOUR ((uint8_t*)(uintptr_t)0x00822740u)   /* 256x256 palette indices */
 #define VOX_DEPTH  ((uint8_t*)(uintptr_t)0x0080FDA8u)   /* 256x256, with the Z flag (0x00835648) */
 #define VOX_BBOX   ((uint32_t*)(uintptr_t)0x00822328u)  /* x, y, w, h (inclusive), list count */
+#define VOX_SURF   0x008200F0u                          /* the BSurface over VOX_COLOUR */
 #define VOX_PAL    ((const uint8_t*)(uintptr_t)0x00822340u)   /* voxels.vpl palette (0x004DFB70 loads it) */
 #define STAGING    (*(const uint32_t*)(uintptr_t)0x0080FA54u)   /* 160x160, 1 byte a pixel */
 #define STAGE_W    160                                  /* its width, height and pitch */
@@ -507,7 +508,7 @@ void ts_vox_shadow_blit(uint32_t dest, uint32_t esp) {
     const int32_t* pt = (const int32_t*)(uintptr_t)a[2];
     const uint32_t* ds = (const uint32_t*)(uintptr_t)dest;
     g_sh_open = 0;
-    if (!ts_vox_hd_on || a[0] != 0x00B2D928u) return;
+    if (!ts_vox_hd_on || a[0] != VOX_SURF) return;
     if (ds[4] != 2) { g_sh_skipped++; return; }  /* not the 16-bit battlefield */
     int x = pt[0], y = pt[1], w = r[2], h = r[3], sx = r[0], sy = r[1];
     if (x < 0) sx -= x, w += x, x = 0;

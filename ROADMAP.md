@@ -23,9 +23,9 @@ in order; each is done when its check is in the suite or the docs.
    (`campaign-*`). Next: a mission played to its win.
 4. **The rest of the menus**: Options, Load Mission with a save present,
    LAN, World Domination Tour as far as it goes without servers.
-5. **HD voxels.** Done for units' bodies (docs/voxels.md). Left: their
-   shadows (`0x00635E20`), checking the other voxel bodies (`0x004472C0`),
-   voxel animations and debris.
+5. **HD voxels.** Done for units and their shadows (docs/voxels.md).
+   Left: checking the other voxel bodies (`0x004472C0`), voxel animations
+   and debris.
 6. **Speed at 4K**: the battlefield is drawn in software into the locked
    primary at about 3 frames a second at 3840x2160 (docs/hires.md).
 7. **Setup.cmd end to end** from a clean folder.
@@ -45,4 +45,8 @@ in order; each is done when its check is in the suite or the docs.
   the movie's 640x400 system-memory surface (`DDLOCK_WAIT`, no rect) while a
   campaign's first movie plays. The crash report records the Lock in flight.
   The timer fix (bringup.md 8) cured the DirectSound crash at the same
-  moment, not this one.
+  moment, not this one. Seen once more as heap corruption (`0xC0000374`)
+  in the movie's audio timer callback (`0x006AFDC0` -> `0x004072D0`); both
+  only with two or more runs at once on a loaded machine, never serially
+  (6 of 6, HD voxels on and off), so most likely a race in the movie's
+  audio that the host's threading widens.
