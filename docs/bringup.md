@@ -97,7 +97,25 @@ The host now owns the game's multimedia timers (`shim_timeSetEvent`,
 waits. The campaign cases three at a time went from a crash in one or two of
 five each round to 15 of 15. (DirectDraw is also asked for
 `DDSCL_MULTITHREADED` now, since the presenter and the recorder lock the
-primary from their own threads; that alone did not stop the crashes.) The
-DirectSound crash has not come back; the display driver's has, once in a
-later full run, during playback rather than at the close, and is open
-(ROADMAP).
+primary from their own threads; that alone did not stop the crashes.)  The display driver's fault came back once more, during playback: that was 9.
+
+## 9. The movie decoder writes past the bottom of its surface
+
+The display-driver fault inside a Lock (8 above) kept coming back now and
+then, and so did heap corruption (`0xC0000374`), always while a campaign's
+first movie played and mostly with several runs at once. A check on
+DirectSound's buffers (every Unlock against its Lock) found nothing. Then
+every system-memory surface got its pixels from the host with a no-access
+page right after the last row, and the next run faulted at the writer:
+`sub_006B02E0`, the VQA decoder, writing row 400 of the movie's 640x400
+surface. It unpacks blocks straight into the locked surface and checks only
+a block's start against the end, so the last row of blocks runs past the
+bottom: by up to 4,648 bytes, measured (3.6 rows of 1,280).
+
+The shipping game does the same; on Windows those bytes land in whatever
+slack follows a surface's memory. Under the headless host there was none,
+and they landed in the heap. The host now gives every system-memory surface
+its pixels with a 64 KB tail behind the last row (`surf_back`, released with
+the surface); `TS_SURFGUARD=1` fills the tail with a pattern and reports how
+far writes reach. The campaign cases three at a time: 15 of 15, against a
+crash in one or two of five each round before.

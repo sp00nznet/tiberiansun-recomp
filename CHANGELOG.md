@@ -30,6 +30,11 @@ versions follow [SemVer](https://semver.org/).
   report every call.
 
 ### Fixed
+- Crashes now and then while a movie played (the display driver inside a
+  Lock, or heap corruption): the game's VQA decoder writes up to 4.6 KB past
+  the bottom of its surface, into slack on Windows and into the heap here.
+  System-memory surfaces get their pixels from the host with a 64 KB tail
+  (docs/bringup.md 9).
 - Crashes under load as a movie closed (in DirectSound, or in the display
   driver): a timer callback ran after its timer was killed. The host owns
   the game's multimedia timers and waits out callbacks in flight

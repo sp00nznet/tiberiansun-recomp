@@ -431,9 +431,12 @@ static HRESULT WINAPI hl_Lock(IDirectDrawSurface* s, LPRECT r, LPDDSURFACEDESC d
     return hr;
 }
 
+static void surf_reach(IDirectDrawSurface* s);   /* below, with the surfaces' backing */
+
 static HRESULT WINAPI hl_Unlock(IDirectDrawSurface* s, LPVOID p) {
     HRESULT hr = g_real_unlock(s, p);
     if (s == g_primary) LeaveCriticalSection(&g_primary_lock);
+    surf_reach(s);
     return hr;
 }
 
@@ -467,6 +470,81 @@ static HRESULT WINAPI hl_BltFast(IDirectDrawSurface* dst, DWORD x, DWORD y, IDir
     return g_real_bltfast(dst, x, y, src, sr, flags);
 }
 
+/* System-memory surfaces get their pixels from the host, with a tail behind
+ * the last row. The game's movie decoder (0x006B02E0) unpacks blocks straight
+ * into a locked surface and checks only a block's start against the end, so
+ * the last row of blocks writes past the bottom: on Windows into whatever
+ * slack follows a surface's memory, here, with none, into the heap, and the
+ * display driver or the heap itself faulted later (docs/bringup.md 9). The
+ * tail is that slack. TS_SURFGUARD=1 fills it with a pattern and reports how
+ * far into it writes reach. */
+#define SURF_TAIL (64u << 10)
+#define MAX_BACKED 64
+static struct { IDirectDrawSurface* s; uint8_t* base; size_t bytes, reach; } g_backed[MAX_BACKED];
+static CRITICAL_SECTION g_backed_lock;
+
+static int surf_guard_on(void) {
+    static int on = -1;
+    if (on < 0) on = getenv("TS_SURFGUARD") != NULL;
+    return on;
+}
+
+static void surf_back(IDirectDrawSurface* s) {
+    IDirectDrawSurface7* s7 = NULL;
+    DDSURFACEDESC2 d;
+    if (s->lpVtbl->QueryInterface(s, &IID_IDirectDrawSurface7, (void**)&s7) != DD_OK) return;
+    memset(&d, 0, sizeof d);
+    d.dwSize = sizeof d;
+    if (s7->lpVtbl->GetSurfaceDesc(s7, &d) == DD_OK && (d.ddsCaps.dwCaps & DDSCAPS_SYSTEMMEMORY) && d.lPitch > 0) {
+        size_t bytes = (size_t)d.lPitch * d.dwHeight;
+        uint8_t* base = (uint8_t*)VirtualAlloc(NULL, bytes + SURF_TAIL, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+        if (base) {
+            if (surf_guard_on()) memset(base + bytes, 0xA5, SURF_TAIL);
+            d.lpSurface = base;
+            d.dwFlags = DDSD_LPSURFACE | DDSD_PITCH | DDSD_WIDTH | DDSD_HEIGHT | DDSD_PIXELFORMAT;
+            if (s7->lpVtbl->SetSurfaceDesc(s7, &d, 0) == DD_OK) {
+                EnterCriticalSection(&g_backed_lock);
+                for (int i = 0; i < MAX_BACKED; i++)
+                    if (!g_backed[i].s) { g_backed[i].s = s, g_backed[i].base = base, g_backed[i].bytes = bytes, g_backed[i].reach = 0; base = NULL; break; }
+                LeaveCriticalSection(&g_backed_lock);
+            }
+            if (base) VirtualFree(base, 0, MEM_RELEASE);   /* not taken, or no room to remember it */
+        }
+    }
+    s7->lpVtbl->Release(s7);
+}
+
+/* TS_SURFGUARD: after an Unlock, how far into the tail writes have reached */
+static void surf_reach(IDirectDrawSurface* s) {
+    if (!surf_guard_on()) return;
+    EnterCriticalSection(&g_backed_lock);
+    for (int i = 0; i < MAX_BACKED; i++)
+        if (g_backed[i].s == s) {
+            const uint8_t* t = g_backed[i].base + g_backed[i].bytes;
+            size_t r = SURF_TAIL;
+            while (r && t[r - 1] == 0xA5) r--;
+            if (r > g_backed[i].reach) {
+                g_backed[i].reach = r;
+                fprintf(stderr, "[surfguard] %p: writes reach %u bytes past its last row\n", (void*)s, (unsigned)r);
+            }
+            break;
+        }
+    LeaveCriticalSection(&g_backed_lock);
+}
+
+typedef ULONG (WINAPI *dds_release_t)(IDirectDrawSurface*);
+static dds_release_t g_real_srelease;
+static ULONG WINAPI hl_SurfRelease(IDirectDrawSurface* s) {
+    ULONG r = g_real_srelease(s);
+    if (r == 0) {
+        EnterCriticalSection(&g_backed_lock);
+        for (int i = 0; i < MAX_BACKED; i++)
+            if (g_backed[i].s == s) { VirtualFree(g_backed[i].base, 0, MEM_RELEASE); g_backed[i].s = NULL; break; }
+        LeaveCriticalSection(&g_backed_lock);
+    }
+    return r;
+}
+
 static HRESULT WINAPI hl_CreateSurface(IDirectDraw* dd, LPDDSURFACEDESC d, LPDIRECTDRAWSURFACE* out,
                                        IUnknown* outer) {
     DDSURFACEDESC c = *d;
@@ -492,6 +570,7 @@ static HRESULT WINAPI hl_CreateSurface(IDirectDraw* dd, LPDDSURFACEDESC d, LPDIR
     fprintf(stderr, "[headless] CreateSurface(flags 0x%lX caps 0x%lX %lux%lu)%s -> 0x%08lX %p\n",
             d->dwFlags, d->ddsCaps.dwCaps, c.dwWidth, c.dwHeight, primary ? " primary" : "", hr,
             hr == DD_OK ? (void*)*out : NULL);
+    if (hr == DD_OK) surf_back(*out);
     if (hr == DD_OK && primary) {
         IDirectDrawSurface* old;
         (*out)->lpVtbl->AddRef(*out);
@@ -515,6 +594,10 @@ static HRESULT WINAPI hl_CreateSurface(IDirectDraw* dd, LPDDSURFACEDESC d, LPDIR
             VirtualProtect(&vt[25], 4, PAGE_READWRITE, &old);
             vt[25] = (void*)hl_Lock;
             VirtualProtect(&vt[25], 4, old, &old);
+            g_real_srelease = (dds_release_t)vt[2];            /* IDirectDrawSurface::Release */
+            VirtualProtect(&vt[2], 4, PAGE_READWRITE, &old);
+            vt[2] = (void*)hl_SurfRelease;
+            VirtualProtect(&vt[2], 4, old, &old);
             g_real_unlock = (dds_unlock_t)vt[32];              /* IDirectDrawSurface::Unlock */
             VirtualProtect(&vt[32], 4, PAGE_READWRITE, &old);
             vt[32] = (void*)hl_Unlock;
@@ -1214,6 +1297,7 @@ int main(int argc, char** argv) {
     }
 
     InitializeCriticalSection(&g_primary_lock);
+    InitializeCriticalSection(&g_backed_lock);
     InitializeCriticalSection(&g_rec_lock);
     /* Headless and the presenter share the virtual display. The presenter
      * keeps the game's message boxes real (a player answers them) and its

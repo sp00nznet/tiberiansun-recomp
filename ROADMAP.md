@@ -40,16 +40,3 @@ in order; each is done when its check is in the suite or the docs.
    `--original` needs pcrecomp #51 (the image loader cut `.text` at its
    VirtualSize, and this exe has a patch's code past it) to reach a skirmish.
 10. **Release**: v0.1.0, private.
-
-## Open
-
-- Under load, now and then (1 of 14 in a full suite run three at a time),
-  the display driver (`nvd3dum.dll`) faults inside a Lock the game makes on
-  the movie's 640x400 system-memory surface (`DDLOCK_WAIT`, no rect) while a
-  campaign's first movie plays. The crash report records the Lock in flight.
-  The timer fix (bringup.md 8) cured the DirectSound crash at the same
-  moment, not this one. Seen once more as heap corruption (`0xC0000374`)
-  in the movie's audio timer callback (`0x006AFDC0` -> `0x004072D0`); both
-  only with two or more runs at once on a loaded machine, never serially
-  (6 of 6, HD voxels on and off), so most likely a race in the movie's
-  audio that the host's threading widens.
