@@ -672,6 +672,17 @@ static DWORD WINAPI hd_frame_dumper(LPVOID unused) {
         fwrite(&ih, sizeof ih, 1, f);
         fwrite(px, 4, (size_t)w * h, f);
         fclose(f);
+        /* ...and the 1x frame right after it, to compare against */
+        if (!host_frame(px, 4096, 2160, &w, &h)) continue;
+        _snprintf(path, sizeof path - 1, "%s/frame_%02d_1x.bmp", g_hd_frames_dir, n - 1), path[sizeof path - 1] = 0;
+        if (!(f = fopen(path, "wb"))) continue;
+        BITMAPINFOHEADER i1 = { sizeof i1, w, -h, 1, 32, BI_RGB };
+        size = off + (uint32_t)w * h * 4;
+        fwrite("BM", 1, 2, f);
+        fwrite(&size, 4, 1, f), fwrite(&zero, 4, 1, f), fwrite(&off, 4, 1, f);
+        fwrite(&i1, sizeof i1, 1, f);
+        fwrite(px, 4, (size_t)w * h, f);
+        fclose(f);
     }
     return 0;
 }
@@ -1061,6 +1072,36 @@ static LONG CALLBACK crash(EXCEPTION_POINTERS* ep) {
     return EXCEPTION_CONTINUE_SEARCH;
 }
 
+/* TS_PROFILE=1: which lifted function is running, sampled every millisecond
+ * (the last one entered), the most frequent printed when the watchdog ends
+ * the run. How the voxel renderer was found (docs/voxels.md). */
+#define PROF_SLOTS 65536
+static struct { uint32_t va, n; } g_prof[PROF_SLOTS];
+static DWORD WINAPI profiler(LPVOID unused) {
+    (void)unused;
+    timeBeginPeriod(1);
+    for (;;) {
+        uint32_t va = g_cur_func;
+        for (uint32_t h = (va * 2654435761u) >> 16, k = 0; va && k < PROF_SLOTS; k++, h = (h + 1) & (PROF_SLOTS - 1))
+            if (g_prof[h].va == va || !g_prof[h].va) { g_prof[h].va = va; g_prof[h].n++; break; }
+        Sleep(1);
+    }
+}
+static int prof_cmp(const void* a, const void* b) {
+    return (int)((const uint32_t*)b)[1] - (int)((const uint32_t*)a)[1];
+}
+static void profile_report(void) {
+    static uint32_t top[PROF_SLOTS][2];
+    int n = 0;
+    uint64_t total = 0;
+    for (int i = 0; i < PROF_SLOTS; i++)
+        if (g_prof[i].va) top[n][0] = g_prof[i].va, top[n][1] = g_prof[i].n, total += g_prof[i].n, n++;
+    if (!n) return;
+    qsort(top, n, sizeof top[0], prof_cmp);
+    for (int i = 0; i < n && i < 40; i++)
+        fprintf(stderr, "[profile] sub_%08X %6u  %4.1f%%\n", top[i][0], top[i][1], 100.0 * top[i][1] / total);
+}
+
 static DWORD WINAPI watchdog(LPVOID unused) {
     (void)unused;
     Sleep(g_watchdog_s * 1000);
@@ -1068,6 +1109,7 @@ static DWORD WINAPI watchdog(LPVOID unused) {
             g_watchdog_s, g_cur_func, g_cur_import, g_icall_count, g_frames);
     native32_dump_icalls(8);
     probe_report();
+    profile_report();
     record_close();
     recomp_trace_flush();
     fflush(stderr);
@@ -1194,6 +1236,7 @@ int main(int argc, char** argv) {
         static const oracle_hook_t hooks[] = { { 0x004082D0u, ts_hook_004082D0 } };
         if (!SetCurrentDirectoryA(game_full)) { fprintf(stderr, "cannot enter %s\n", game_full); return 1; }
         if (g_watchdog_s) CloseHandle(CreateThread(NULL, 0, watchdog, NULL, 0, NULL));
+    if (getenv("TS_PROFILE")) CloseHandle(CreateThread(NULL, 0, profiler, NULL, 0, NULL));
         if (g_record) CloseHandle(CreateThread(NULL, 0, recorder, NULL, 0, NULL));
         input_start();
         if (!g_classic && !g_headless) present_start(g_scale_mode, g_fullscreen);
@@ -1219,6 +1262,7 @@ int main(int argc, char** argv) {
     /* The game opens its MIX files relative to its working directory. */
     if (!SetCurrentDirectoryA(game_full)) { fprintf(stderr, "cannot enter %s\n", game_full); return 1; }
     if (g_watchdog_s) CloseHandle(CreateThread(NULL, 0, watchdog, NULL, 0, NULL));
+    if (getenv("TS_PROFILE")) CloseHandle(CreateThread(NULL, 0, profiler, NULL, 0, NULL));
     if (g_record) CloseHandle(CreateThread(NULL, 0, recorder, NULL, 0, NULL));
     /* A script drives the virtual display, headless or in the presenter (the
      * lab's LAN games: a window to snap, a script to play); the script's

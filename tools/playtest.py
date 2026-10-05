@@ -206,6 +206,12 @@ case('campaign-build',
      .click(*LIGHT_INF, after=3),                              # a light infantry
      240, dialogs=[CAMPAIGN], ingame=True, log={'Adding event PRODUCE': 3, 'Adding event PLACE': 2})
 
+# HD voxels on (the presenter's default; --hd-voxels headless): a skirmish
+# and the build case, the game unchanged by it.
+_hd = firestorm().click(*MENU_SKIRMISH, after=4).press(SKIRMISH, 'OK')
+_hd.args.append('--hd-voxels')
+case('skirmish-hd', _hd, 90, dialogs=[SKIRMISH], ingame=True)
+
 # High resolution: SUN.INI [Video], what the presenter's settings menu writes.
 for w, h, tag in ((1280, 720, '720p'), (1920, 1080, '1080p'), (2560, 1440, '1440p'), (3840, 2160, '4k')):
     case('skirmish-' + tag, firestorm((w, h)).click(*MENU_SKIRMISH, after=4).press(SKIRMISH, 'OK'), 180,

@@ -26,7 +26,7 @@ redalert2-recomp; everything tied to an address was found again in this exe
 | Playtest suite (`tools/playtest.py`) | **14 of 14 passing**: menus, skirmish 640x400 to 4K, the four campaigns, a power plant and a Hand of Nod built and placed and an infantryman trained ([testing.md](docs/testing.md)) |
 | Conformance (`tools/conformance.py`) | **8/8** boot milestones to the choice screen, lift 0 errors |
 | Presenter (the default display) | the game in its own Direct3D 11 window, from redalert2-recomp: sharp scaling, blurred bars, clicks mapped into the game; checked with the menus ([presenter.md](docs/presenter.md)) |
-| HD voxels | not yet: redalert2-recomp's patches have to be found again in this renderer |
+| HD vehicles | units' bodies at 2x, Red Alert 2's four half-pixel passes found again in this renderer; shadows not yet ([voxels.md](docs/voxels.md)) |
 
 Three walls so far, each in [bringup.md](docs/bringup.md): a gadget rect the
 game never initialised (a crash on a quarter of runs, from the first mouse
@@ -98,7 +98,8 @@ starts at the game's `Game Init Completed`.
 Environment: `TS_EXE` (another build to test), `TS_HOST_ARGS` (extra host
 flags for every playtest case), `TS_PROBE_ALL=1` (`--probe` reports every
 call, not the first five), `TS_DDTRACE=1` (the first DirectDraw locks and
-blits).
+blits), `TS_PROFILE=1` (which lifted functions the time goes to, printed
+when the watchdog ends the run).
 
 ## License
 

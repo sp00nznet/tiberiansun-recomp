@@ -1,32 +1,31 @@
 /* HD voxels: vehicles drawn at twice the resolution (docs/voxels.md).
  *
- * How the game draws a voxel unit (Game.exe 1.001):
- *   1. each part (body, turret, barrel) is rendered into a 256x256 buffer of
- *      palette indices (0x00B2FF78), and blitted through a remap into the
- *      256x256 staging surface ([0x00B1D13C]) by 0x004AF2A0;
- *   2. the finished staging image is copied onto the battlefield, with the
- *      unit's palette, lighting and the Z-buffer, by 0x004373B0 (call at
- *      0x0073B446);
- *   3. at the end of the frame the battlefield reaches the frame surface
- *      ([0x00887308], whose DirectDraw surface is the primary).
+ * How Tiberian Sun draws a voxel unit's body (Game.exe, 0x00635B00):
+ *   1. it is rendered into a 256x256 buffer of palette indices (0x00822740):
+ *      view setup and clear (0x00666030), its sections, then the finish
+ *      stage (0x00666720) that turns their records into pixels (the shadow
+ *      is a separate render, 0x00635E20);
+ *   2. each image goes straight onto the battlefield ([0x0074C5E4]) through
+ *      a palette converter and the Z-buffer, by 0x0047CC10;
+ *   3. at the end of the frame the battlefield reaches the primary
+ *      ([0x0074C5D8]) through DSurface's copy (0x0048B590).
+ * Red Alert 2 builds a unit in a staging surface first; here every unit
+ * takes the path its aircraft take.
  *
  * What this adds, through run_lift.py HD_VOXEL_PATCHES:
- *   1. the render's finish stage runs three more times with every span
+ *   1. the body's finish stage runs three more times with every span
  *      starting half a pixel further left, up, or both; the four images
  *      interleave into one at 2x (ts_vox_hd);
- *   2. each part's blit into staging is watched: the remap it applied and the
- *      pixels it wrote are learnt from the staging before and after, and the
- *      part's 2x image, remapped, is kept as a "stamp";
- *   3. the copy onto the battlefield is watched the same way: from the
- *      battlefield before and after it learns each index's final colour and
- *      which pixels the unit really got (the Z-buffer's say), and it records
- *      them with the 2x colours of the stamps under them;
- *   4. at the frame copy the records are published; the presenter's 2x frame
+ *   2. the blit onto the battlefield is watched: from the battlefield before
+ *      and after it learns each index's final colour and which pixels the
+ *      unit really got (the Z-buffer's say), and records them with the 2x
+ *      colours;
+ *   3. at the frame copy the records are published; the presenter's 2x frame
  *      (hdvox_compose) takes a record's four 2x pixels wherever the finished
  *      1x frame still shows exactly what the unit wrote there, so anything
  *      drawn over the unit afterwards keeps its 1x pixels.
  * Nothing the game sees changes: its buffers, rects and surfaces are as they
- * would have been. Off (the default), every hook returns at once.
+ * would have been. Off, every hook returns at once.
  */
 #include <windows.h>
 #include <ddraw.h>
@@ -36,12 +35,14 @@
 #include <string.h>
 #include "hdvox.h"
 
-#define VOX_COLOUR ((uint8_t*)(uintptr_t)0x00B2FF78u)   /* 256x256 palette indices */
-#define VOX_DEPTH  ((uint8_t*)(uintptr_t)0x00B1D5E0u)   /* 256x256, with the Z flag */
-#define VOX_BBOX   ((uint32_t*)(uintptr_t)0x00B2FB60u)  /* x, y, w, h, list count */
-#define VOX_PAL    ((const uint8_t*)(uintptr_t)0x00B2FB78u)
-#define STAGING    (*(const uint32_t*)(uintptr_t)0x00B1D13Cu)
-#define FRAME_SURF (*(const uint32_t*)(uintptr_t)0x00887308u)
+#define VOX_COLOUR ((uint8_t*)(uintptr_t)0x00822740u)   /* 256x256 palette indices */
+#define VOX_DEPTH  ((uint8_t*)(uintptr_t)0x0080FDA8u)   /* 256x256, with the Z flag (0x00835648) */
+#define VOX_BBOX   ((uint32_t*)(uintptr_t)0x00822328u)  /* x, y, w, h (inclusive), list count */
+#define VOX_PAL    ((const uint8_t*)(uintptr_t)0x00822340u)   /* voxels.vpl palette (0x004DFB70 loads it) */
+#define STAGING    (*(const uint32_t*)(uintptr_t)0x0080FA54u)   /* 160x160, 1 byte a pixel */
+#define STAGE_W    160                                  /* its width, height and pitch */
+#define STAGE_DIRTY ((const int32_t*)(uintptr_t)0x0080F8E0u)    /* the parts' union: x, y, w, h */
+#define FRAME_SURF (*(const uint32_t*)(uintptr_t)0x0074C5D8u)   /* the primary's DSurface */
 
 int ts_vox_hd_on;
 int16_t ts_vox_dx, ts_vox_dy;          /* read by the rasterizer patch, 8.8 */
@@ -116,7 +117,7 @@ static uint64_t memo_key(void) {
 
 static int hd_begin(uint32_t save, uint32_t len, int memo_ok);
 
-/* After 0x00754510: rect is the 6-dword rect it returned. */
+/* After 0x00666720: rect is the 6-dword rect it returned. */
 int ts_vox_hd_begin(uint32_t rect) {
     return hd_begin(rect, 24, memo_rect((const uint32_t*)(uintptr_t)rect));
 }
@@ -260,11 +261,11 @@ void ts_vox_hd_blit(uint32_t dest, uint32_t convert, uint32_t esp) {
     stamp_t* s = &g_stamps[g_nstamps];
     s->x = pt[0], s->y = pt[1], s->w = r[2], s->h = r[3];
     g_src_x = r[0], g_src_y = r[1];
-    if (s->x < 0 || s->y < 0 || s->w <= 0 || s->h <= 0 || s->x + s->w > 256 || s->y + s->h > 256 ||
+    if (s->x < 0 || s->y < 0 || s->w <= 0 || s->h <= 0 || s->x + s->w > STAGE_W || s->y + s->h > STAGE_W ||
         g_src_x < 0 || g_src_y < 0 || g_src_x + s->w > 256 || g_src_y + s->h > 256)
         return;                                   /* clipped: leave the part at 1x */
     const uint8_t* st = staging_px();
-    for (int j = 0; j < s->h; j++) memcpy(s->before + j * s->w, st + (s->y + j) * 256 + s->x, s->w);
+    for (int j = 0; j < s->h; j++) memcpy(s->before + j * s->w, st + (s->y + j) * STAGE_W + s->x, s->w);
     g_stamp_open = 1;
 }
 
@@ -282,7 +283,7 @@ void ts_vox_hd_blitted(void) {
     stamp_t* s = &g_stamps[g_nstamps];
     const uint8_t* st = staging_px();
     uint8_t remap[256], known[256] = { 0 };
-    for (int j = 0; j < s->h; j++) memcpy(s->after + j * s->w, st + (s->y + j) * 256 + s->x, s->w);
+    for (int j = 0; j < s->h; j++) memcpy(s->after + j * s->w, st + (s->y + j) * STAGE_W + s->x, s->w);
     /* the remap the blit applied, learnt from what it wrote */
     for (int j = 0; j < s->h; j++)
         for (int i = 0; i < s->w; i++) {
@@ -434,17 +435,17 @@ void ts_vox_unit_copy(uint32_t dest, uint32_t esp) {
     const uint32_t* ds = (const uint32_t*)(uintptr_t)dest;
     g_copy_open = 0;
     if (!ts_vox_hd_on || a[1] != STAGING) { g_nstamps = 0; return; }
-    /* The source is the staging's dirty rect, the parts' union (0x00B1CFC0);
+    /* The source is the staging's dirty rect, the parts' union (0x0080F8E0);
      * the stack's third rect is only the staging's bounds. Clip the
      * destination to the surface, the source with it. */
-    const int32_t* dirty = (const int32_t*)(uintptr_t)0x00B1CFC0u;
+    const int32_t* dirty = STAGE_DIRTY;
     int x = dr[0], y = dr[1], w = dr[2], h = dr[3], sx = dirty[0], sy = dirty[1];
     (void)sr;
     if (x < 0) sx -= x, w += x, x = 0;
     if (y < 0) sy -= y, h += y, y = 0;
     if (x + w > (int)ds[1]) w = (int)ds[1] - x;
     if (y + h > (int)ds[2]) h = (int)ds[2] - y;
-    if (w <= 0 || h <= 0 || w > 1024 || h > 480 || sx < 0 || sy < 0 || sx + w > 256 || sy + h > 256) {
+    if (w <= 0 || h <= 0 || w > 1024 || h > 480 || sx < 0 || sy < 0 || sx + w > STAGE_W || sy + h > STAGE_W) {
         g_nstamps = 0;
         return;
     }
@@ -464,14 +465,14 @@ void ts_vox_unit_copied(void) {
      * the stamp's own 1x pixel is still there (a later part did not cover it) */
     for (int j = 0; j < 2 * h; j++)
         for (int i = 0; i < 2 * w; i++)
-            s2[j * 512 + i] = st[(sy + j / 2) * 256 + sx + i / 2];
+            s2[j * 512 + i] = st[(sy + j / 2) * STAGE_W + sx + i / 2];
     for (int k = 0; k < g_nstamps; k++) {
         const stamp_t* s = &g_stamps[k];
         for (int j = 0; j < s->h; j++)
             for (int i = 0; i < s->w; i++) {
                 int px = s->x + i - sx, py = s->y + j - sy;      /* in this copy's 1x rect */
                 if (px < 0 || py < 0 || px >= w || py >= h) continue;
-                uint8_t now = st[(s->y + j) * 256 + s->x + i];
+                uint8_t now = st[(s->y + j) * STAGE_W + s->x + i];
                 uint8_t was = s->before[j * s->w + i], put = s->after[j * s->w + i];
                 if (now != put) continue;                      /* covered later */
                 int wrote = put != was;
@@ -483,7 +484,7 @@ void ts_vox_unit_copied(void) {
             }
     }
     g_nstamps = 0;
-    record_image(g_cx, g_cy, w, h, st + sy * 256 + sx, 256, s2, 512);
+    record_image(g_cx, g_cy, w, h, st + sy * STAGE_W + sx, STAGE_W, s2, 512);
 }
 
 /* ---- 3b. shadows --------------------------------------------------------------------- */

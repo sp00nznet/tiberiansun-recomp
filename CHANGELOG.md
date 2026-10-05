@@ -6,6 +6,11 @@ versions follow [SemVer](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- HD vehicles: units' bodies drawn at 2x from four half-pixel-offset renders,
+  Red Alert 2's method found again in this renderer (docs/voxels.md); the
+  voxel cache is off while they are on. `skirmish-hd` runs with them.
+- `TS_PROFILE=1`: a sampling profile of the lifted functions; the frame dump
+  (`--hd-voxels-dump`) writes each 2x frame's 1x frame beside it.
 - All four campaigns to their first mission (Tiberian Sun and Firestorm,
   GDI and Nod), their VQA movies included, and `campaign-build`: a power
   plant and a Hand of Nod built and placed and a light infantry trained on

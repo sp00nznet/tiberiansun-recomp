@@ -23,8 +23,9 @@ in order; each is done when its check is in the suite or the docs.
    (`campaign-*`). Next: a mission played to its win.
 4. **The rest of the menus**: Options, Load Mission with a save present,
    LAN, World Domination Tour as far as it goes without servers.
-5. **HD voxels**: redalert2-recomp's four half-pixel passes, found again in
-   this renderer by shape (its docs/voxels.md).
+5. **HD voxels.** Done for units' bodies (docs/voxels.md). Left: their
+   shadows (`0x00635E20`), checking the other voxel bodies (`0x004472C0`),
+   voxel animations and debris.
 6. **Speed at 4K**: the battlefield is drawn in software into the locked
    primary at about 3 frames a second at 3840x2160 (docs/hires.md).
 7. **Setup.cmd end to end** from a clean folder.

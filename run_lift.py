@@ -94,6 +94,81 @@ PATCHES = {
 }
 
 
+# HD voxels (docs/voxels.md): Red Alert 2's, found again in this renderer.
+# A unit's body is rendered by 0x00635B00 into the 256x256 voxel buffer
+# (0x00822740): its sections, then the finish stage (0x00666720) that turns
+# their records into pixels, each span through a rasterizer from the table at
+# 0x00713878; the image goes straight onto the battlefield through 0x0047CC10.
+# The finish stage runs three more times with every span half a pixel further
+# left, up, or both; the four images interleave into one at 2x. Gated at run
+# time by the host (src/runtime/hdvox.c): off, nothing here does anything.
+TAG = '/* remaster: HD voxels, run_lift.py HD_VOXEL_PATCHES */'
+
+
+def _hd_passes(arg):
+    """C for the three extra runs of 0x00666720, ecx = esp + arg each time
+    (it fills the 6-dword rect at ecx and returns it in eax)."""
+    return ('{ extern int ts_vox_hd_begin(uint32_t); extern void ts_vox_hd_pass(int); '
+            'extern uint32_t ts_vox_hd_end(void); '
+            'if (ts_vox_hd_begin(eax)) { for (int _k = 1; _k < 4; _k++) { ts_vox_hd_pass(_k); '
+            'ecx = esp + 0x%X; RECOMP_CALL(sub_00666720); } eax = ts_vox_hd_end(); } } ' % arg + TAG)
+
+
+def _hd_blit():
+    """C just before 0x0047CC10: ecx the battlefield, edx the converter, then
+    on the stack the source surface, its rect and the destination point."""
+    return '{ extern void ts_vox_hd_blit(uint32_t, uint32_t, uint32_t); ts_vox_hd_blit(ecx, edx, esp); } ' + TAG
+
+
+def _hd_blitted():
+    return '{ extern void ts_vox_hd_blitted(void); ts_vox_hd_blitted(); } ' + TAG
+
+
+
+def _hd_copy():
+    return '{ extern void ts_vox_unit_copy(uint32_t, uint32_t); ts_vox_unit_copy(ecx, esp); } ' + TAG
+
+
+def _hd_copied():
+    return '{ extern void ts_vox_unit_copied(void); ts_vox_unit_copied(); } ' + TAG
+
+
+HD_VOXEL_PATCHES = {
+    # 0x00668730: the span record handed to the rasterizer is at esp+0x20
+    # (eax, just pushed); its starts, x at +0x18 and y at +0x1A, are 8.8.
+    0x006689E2: ('{ extern int16_t ts_vox_dx, ts_vox_dy; '
+                 'MEM16(eax + 0x18) += ts_vox_dx; MEM16(eax + 0x1A) += ts_vox_dy; } ' + TAG),
+    # 0x006354E0 draws a unit's body from its voxel cache: a key of -1 (its
+    # third argument, [esp+0x60] once the prologue is done) renders it
+    # straight onto the battlefield instead. With HD voxels on, always: every
+    # unit is rendered (and at 2x) each frame, as Red Alert 2's patch does.
+    0x006354EC: '{ extern int ts_vox_hd_on; if (ts_vox_hd_on) MEM32(esp + 0x60) = 0xFFFFFFFFu; } ' + TAG,
+    # A unit's body (0x00635B00): the extra passes just after its finish
+    # stage, then its blit onto the battlefield watched.
+    0x00635BF9: _hd_passes(0x4C),
+    0x00635DE9: _hd_blit(),
+    0x00635DEB: _hd_blitted(),
+    # 0x00651F50 (a unit's Draw_It, after its parts are in the 160x160
+    # staging surface [0x0080FA54]) copies staging onto the battlefield with
+    # the house palette, lighting and the Z-buffer through 0x00423530: ecx
+    # the battlefield, on the stack the destination rect, the staging
+    # surface, its rect. Around each of its three calls the host looks at
+    # the battlefield, to place the unit's 2x image where its 1x one went.
+    0x00652219: _hd_copy(),
+    0x0065221B: _hd_copied(),
+    0x006522A8: _hd_copy(),
+    0x006522AA: _hd_copied(),
+    0x006522FC: _hd_copy(),
+    0x00652303: _hd_copied(),
+    # The same in 0x004472C0, the other voxel body draw.
+    0x00447387: _hd_passes(0x34),
+    0x0044741C: _hd_blit(),
+    0x00447422: _hd_blitted(),
+    # 0x0048B590, DSurface's copy from another surface: into the primary,
+    # it ends a frame, and the host publishes the 2x layer built during it.
+    0x0048B590: '{ extern void ts_vox_frame_blit(uint32_t, uint32_t); ts_vox_frame_blit(ecx, esp + 4); } ' + TAG,
+}
+
 SIDEBAR_ROWS_MAX = 20
 
 
@@ -210,6 +285,7 @@ def main():
     # (its docs/bringup.md); off by default in lift32 only because Fury3 leans
     # on the imprecision.
     patches = sidebar_rows_patches(code, cs)
+    patches.update(HD_VOXEL_PATCHES)
     patches.update(PATCHES)
     print('[*] remaster patches: %d' % len(patches))
     lifter = Lifter(iat_map=iat, lifted=set(byaddr), precise_carry=True, precise_sbb=True)
