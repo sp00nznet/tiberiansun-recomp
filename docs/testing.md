@@ -33,6 +33,7 @@ What the game logs is how a case knows where it is:
 | in game | `Tooltips are on.` |
 | a movie starts | `Opening VQ audio handler` |
 | an order | `Adding event PRODUCE`, `PLACE`, `DEPLOY`, `SCATTER` (move orders print none) |
+| out of a game | `Tooltips are off.` |
 
 ## The cases
 
@@ -45,6 +46,7 @@ What the game logs is how a case knows where it is:
 | `skirmish-start` | a skirmish with the defaults: in game, the picture moving |
 | `skirmish-720p` .. `skirmish-4k` | the same at each resolution (docs/hires.md) |
 | `campaign-fs-gdi`, `campaign-fs-nod`, `campaign-ts-gdi`, `campaign-ts-nod` | each campaign to its first mission: the campaign dialog (`0x94`, its list), OK, Escape once the first movie opens |
+| `load-mission` | on the first Nod mission: the in-game menu (`0xB5`), Save Game (`0x2B4`) into the first slot, Abort Mission (`0xB6`), then the main menu's Load Mission (`0xB7`) and the save, back in game |
 | `skirmish-hd` | a skirmish with HD voxels on (`--hd-voxels`) |
 | `campaign-build` | on the first Nod mission: a power plant and a Hand of Nod built from the sidebar and placed, then a light infantry; at least 3 `PRODUCE` and 2 `PLACE` events |
 

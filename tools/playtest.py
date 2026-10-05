@@ -219,6 +219,21 @@ _hd = firestorm().click(*MENU_SKIRMISH, after=4).press(SKIRMISH, 'OK')
 _hd.args.append('--hd-voxels')
 case('skirmish-hd', _hd, 90, dialogs=[SKIRMISH], ingame=True)
 
+# Save and load: on the first Nod mission, Escape opens the in-game menu (a
+# dialog, 0xB5); Save Game (0x2B4) into the first slot, Abort Mission, then
+# the main menu's Load Mission and the save, back in game.
+INGAME_MENU, SAVE, SAVED, ABORT, LOAD, LOAD_MENU = 0xB5, 0x2B4, 0xCE, 0xB6, 0xB7, (318, 187)
+case('load-mission',
+     S().click(*CHOICE_TS, after=2).waitlog(MENU_OPEN).click(*NEW_CAMPAIGN, after=4)
+     .select(CAMPAIGN, CAMPAIGN_LIST, 1).press(CAMPAIGN, 'OK')
+     .waitlog('Opening VQ audio handler').key('0x1B', after=2).waitlog('Tooltips are on.')
+     .key('0x1B', after=3).press(INGAME_MENU, 1311).select(SAVE, 1319, 0).press(SAVE, 1)
+     .press(SAVED, 1454)                                  # the message after saving: OK
+     .key('0x1B', after=3).press(INGAME_MENU, 1314).press(ABORT, 1314)
+     .waitlog('Tooltips are off.').click(*LOAD_MENU, after=6).select(LOAD, 1317, 0).press(LOAD, 1).waitlog('Tooltips are on.'),
+     200, dialogs=[CAMPAIGN, INGAME_MENU, SAVE, SAVED, ABORT, LOAD], ingame=True,
+     log={'Tooltips are on.': 2})
+
 # High resolution: SUN.INI [Video], what the presenter's settings menu writes.
 for w, h, tag in ((1280, 720, '720p'), (1920, 1080, '1080p'), (2560, 1440, '1440p'), (3840, 2160, '4k')):
     case('skirmish-' + tag, firestorm((w, h)).click(*MENU_SKIRMISH, after=4).press(SKIRMISH, 'OK'), 180,
