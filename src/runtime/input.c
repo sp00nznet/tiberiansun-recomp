@@ -258,7 +258,9 @@ static LRESULT CALLBACK watch_getmsg(int code, WPARAM wp, LPARAM lp) {
 
 static LRESULT CALLBACK watch_callwnd(int code, WPARAM wp, LPARAM lp) {
     const CWPSTRUCT* m = (const CWPSTRUCT*)lp;
-    if (code >= 0 && m->message == WM_COMMAND && m->hwnd == g_watch_dlg &&
+    /* to whichever window is the button's parent: a control inside a panel
+     * of the dialog tells the panel, not the dialog */
+    if (code >= 0 && m->message == WM_COMMAND && (HWND)m->lParam == g_watch_btn &&
         LOWORD(m->wParam) == g_watch_ctrl && HIWORD(m->wParam) == BN_CLICKED)
         InterlockedIncrement(&g_watch_cmd);
     return CallNextHookEx(NULL, code, wp, lp);
@@ -308,7 +310,7 @@ static const char* press(int dlg, int ctrl, LONG* shift) {
         if (!IsWindow(d) || g_dialogs_opened != opens || g_watch_cmd != cmd0) how = "click";
         else if (!t_up && GetTickCount() - t0 > 120000) how = "click, never taken";
         else if (t_up && GetTickCount() - t_up > 2000) {
-            PostMessageA(d, WM_COMMAND, MAKEWPARAM(ctrl, BN_CLICKED), (LPARAM)c);
+            PostMessageA(GetParent(c), WM_COMMAND, MAKEWPARAM(ctrl, BN_CLICKED), (LPARAM)c);
             how = "BN_CLICKED";
         }
     }
