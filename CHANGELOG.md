@@ -30,6 +30,8 @@ versions follow [SemVer](https://semver.org/).
   report every call.
 
 ### Fixed
+- 4K looked like 3 frames a second: `--record` opened its video at the
+  game's mode and x264 could not keep up. Recordings are at most 1280 wide.
 - Crashes now and then while a movie played (the display driver inside a
   Lock, or heap corruption): the game's VQA decoder writes up to 4.6 KB past
   the bottom of its surface, into slack on Windows and into the heap here.

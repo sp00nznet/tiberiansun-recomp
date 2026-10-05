@@ -51,8 +51,7 @@ What the game logs is how a case knows where it is:
 | `campaign-build` | on the first Nod mission: a power plant and a Hand of Nod built from the sidebar and placed, then a light infantry; at least 3 `PRODUCE` and 2 `PLACE` events |
 
 "The picture moving" counts distinct checksums the recorder prints every 100
-recorded frames; at 4K the game draws about 3 frames a second, so those cases
-run 180 seconds.
+recorded frames; the hi-res cases run 180 seconds.
 
 ## TS against TS over the LAN
 

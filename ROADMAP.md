@@ -28,8 +28,8 @@ in order; each is done when its check is in the suite or the docs.
 5. **HD voxels.** Done for units and their shadows (docs/voxels.md).
    Left: voxel projectiles (`0x004472C0`, BulletClass), voxel animations
    and debris, each with a test that puts one on screen.
-6. **Speed at 4K**: the battlefield is drawn in software into the locked
-   primary at about 3 frames a second at 3840x2160 (docs/hires.md).
+6. **Speed at 4K**. Done: it was the recorder encoding 4K video, not the
+   game (docs/hires.md).
 7. **Setup.cmd end to end** from a clean folder. Done (a fresh clone with
    pcrecomp `main` beside it: catalog, lift, build, 8/8 conformance).
 8. **LAN multiplayer**: TS against TS between two PCs. The scripts are in

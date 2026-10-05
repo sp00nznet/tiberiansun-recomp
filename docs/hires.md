@@ -39,7 +39,8 @@ bottom of the screen, below the scroll buttons.
 
 ## Speed
 
-The game draws the battlefield in software into the locked primary, and its
-frame rate follows the pixel count: about 20 frames a second recorded at
-1080p, 10 at 1440p and 3 at 4K on the development machine. Making that
-cheaper is on the ROADMAP.
+It once looked as if the frame rate followed the pixel count: about 20
+frames a second recorded at 1080p, 10 at 1440p and 3 at 4K. That was the
+recorder, which opened its video at the game's first mode and asked x264
+for 4K at 30 frames a second. Recordings are now at most 1280 wide, and 4K
+records as many frames as 1080p (4,880 in three minutes).

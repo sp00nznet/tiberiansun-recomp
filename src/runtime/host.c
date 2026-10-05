@@ -783,14 +783,17 @@ static DWORD WINAPI recorder(LPVOID unused) {
         if (!g_ffmpeg && g_recorded) { LeaveCriticalSection(&g_rec_lock); return 0; }   /* closed */
         if (!g_ffmpeg) {
             char cmd[MAX_PATH * 2];
+            /* At most 1280 wide: x264 at 4K encoded 3 frames a second, so the
+             * recording, not the game, looked slow. */
+            int k = (w + 1279) / 1280;
+            g_rec_w = (DWORD)(w / k) & ~1u;
+            g_rec_h = (DWORD)(h / k) & ~1u;
             _snprintf(cmd, sizeof cmd - 1, "ffmpeg -y -loglevel error -f rawvideo -pix_fmt bgr0 "
-                      "-s %dx%d -r 30 -i - -c:v libx264 -pix_fmt yuv420p \"%s\"", w, h, g_record);
+                      "-s %lux%lu -r 30 -i - -c:v libx264 -pix_fmt yuv420p \"%s\"", g_rec_w, g_rec_h, g_record);
             g_ffmpeg = _popen(cmd, "wb");
-            g_rec_w = (DWORD)w;
-            g_rec_h = (DWORD)h;
-            fprintf(stderr, "[record] %dx%d -> %s\n", w, h, g_record);
+            fprintf(stderr, "[record] %lux%lu -> %s\n", g_rec_w, g_rec_h, g_record);
         }
-        if (g_recorded % 100 == 0) {         /* the playtest counts distinct ones: 4K runs at ~3 fps */
+        if (g_recorded % 100 == 0) {         /* the playtest counts distinct ones */
             uint32_t sum = 0;
             for (int k = 0; k < w * h; k += 16) sum = sum * 31 + frame[k];
             fprintf(stderr, "[record] frame %ld checksum %08X\n", g_recorded, sum);
