@@ -21,8 +21,9 @@ in order; each is done when its check is in the suite or the docs.
    (its cell from the generator, or SelectSameType), on open ground.
 3. **The campaigns.** Done to the first mission, all four
    (`campaign-*`). Next: a mission played to its win.
-4. **The rest of the menus**: Options, Load Mission with a save present,
-   LAN, World Domination Tour as far as it goes without servers.
+4. **The rest of the menus.** Done: Options and its five screens
+   (`options-*`). Left: Load Mission with a save present, World Domination
+   Tour as far as it goes without servers.
 5. **HD voxels.** Done for units and their shadows (docs/voxels.md).
    Left: checking the other voxel bodies (`0x004472C0`), voxel animations
    and debris.

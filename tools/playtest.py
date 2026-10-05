@@ -165,6 +165,13 @@ case('menu-tibsun', S().click(*CHOICE_TS, after=2).waitlog(MENU_OPEN), 40, dialo
 # The skirmish setup screen, and back out of it.
 case('menu-skirmish', firestorm().click(*MENU_SKIRMISH, after=4).press(SKIRMISH, 'Cancel'), 60,
      dialogs=[SKIRMISH])
+# Options (0xD5) and each of its screens, opened and left again (Cancel, or
+# the one button a screen without it has), back on Options.
+OPTIONS = 0xD5
+for name, ctrl, dlg, leave in (('game', 1488, 0xF5, 1), ('display', 1484, 0xD8, 2), ('sound', 1487, 0xD6, 1),
+                               ('keyboard', 1486, 0xA3, 2), ('network', 1485, 0xD7, 2)):
+    case('options-' + name, firestorm().click(*MENU_OPTIONS, after=4).press(OPTIONS, ctrl).press(dlg, leave),
+         60, dialogs=[OPTIONS, dlg])
 # A skirmish with the defaults: in game, the picture moving.
 case('skirmish-start', firestorm().click(*MENU_SKIRMISH, after=4).press(SKIRMISH, 'OK'), 90,
      dialogs=[SKIRMISH], ingame=True)
