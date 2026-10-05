@@ -26,8 +26,8 @@ in order; each is done when its check is in the suite or the docs.
    (`load-mission`). Left: World Domination Tour as far as it goes without
    servers.
 5. **HD voxels.** Done for units and their shadows (docs/voxels.md).
-   Left: checking the other voxel bodies (`0x004472C0`), voxel animations
-   and debris.
+   Left: voxel projectiles (`0x004472C0`, BulletClass), voxel animations
+   and debris, each with a test that puts one on screen.
 6. **Speed at 4K**: the battlefield is drawn in software into the locked
    primary at about 3 frames a second at 3840x2160 (docs/hires.md).
 7. **Setup.cmd end to end** from a clean folder. Done (a fresh clone with

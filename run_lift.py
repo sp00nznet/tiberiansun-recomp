@@ -172,10 +172,6 @@ HD_VOXEL_PATCHES = {
     0x00635ECF: _hd_passes(0x28),
     0x00635F6E: '{ extern void ts_vox_shadow_blit(uint32_t, uint32_t); ts_vox_shadow_blit(ecx, esp); } ' + TAG,
     0x00635F6F: '{ extern void ts_vox_shadow_blitted(void); ts_vox_shadow_blitted(); } ' + TAG,
-    # The same in 0x004472C0, the other voxel body draw.
-    0x00447387: _hd_passes(0x34),
-    0x0044741C: _hd_blit(),
-    0x00447422: _hd_blitted(),
     # 0x0048B590, DSurface's copy from another surface: into the primary,
     # it ends a frame, and the host publishes the 2x layer built during it.
     0x0048B590: '{ extern void ts_vox_frame_blit(uint32_t, uint32_t); ts_vox_frame_blit(ecx, esp + 4); } ' + TAG,

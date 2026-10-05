@@ -21,7 +21,7 @@ UnitClass Draw_It            0x00652330  points [0x0074C5E4] at the staging surf
       blit into staging      0x0047CC10  with the remap
   copy staging out           0x00651F50 (vtable +0x3C8) -> 0x00423530, three call sites
 shadow                       0x00635E20  its own render and blit
-other voxel bodies           0x004472C0
+voxel projectiles            0x004472C0  (BulletClass Draw_It, 0x00445C00)
 ```
 
 | What | Where | |
@@ -83,5 +83,5 @@ blitted onto the battlefield by `0x0047CC10` with the shadow converter. The
 darkened the way the 1x one is. Most of a shadow is under its unit; what
 shows at 2x is its edge.
 
-Not yet: the other voxel bodies through `0x004472C0` have their passes but
-their records are not checked; voxel animations and debris.
+Not yet: voxel projectiles (`0x004472C0`, from BulletClass's Draw_It) and
+voxel animations and debris stay 1x until a test puts one on screen.
