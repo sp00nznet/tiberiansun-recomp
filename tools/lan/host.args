@@ -1,0 +1,11 @@
+# TS LAN game, the hosting side: build\ts.exe --run --mute --args tools\lan\host.args (docs/testing.md).
+# Seconds count from the game's "Game Init Completed"; a press waits for its screen to be open.
+--debuglog
+--hd-voxels-dump lan-frames   # the game's own picture every 10 s, whatever covers its window
+--click 470,200@3        # Firestorm, on the choice screen
+--waitlog closed@4       # "VQ audio handler closed OK": the movie into its main menu has ended
+--click 318,216@9        # Lan: the LAN lobby (0xBB)
+--press 0xBB:1340@12     # New: host a game (0xBC, the host screen)
+--press 0xBC:1416@150    # Go!, once the joiner has accepted
+--waitlog Tooltips@151    # "Tooltips are on.": in game
+--move 236,208@152       # the cursor onto the battlefield

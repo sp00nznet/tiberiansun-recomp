@@ -1,0 +1,11 @@
+# TS LAN game, the joining side: build\ts.exe --run --mute --args tools\lan\joiner.args (docs/testing.md).
+--debuglog
+--hd-voxels-dump lan-frames   # the game's own picture every 10 s, whatever covers its window
+--click 470,200@3        # Firestorm, on the choice screen
+--waitlog closed@4
+--click 318,216@9        # Lan: the LAN lobby (0xBB)
+--select 0xBB:1353=1@35  # the host's game (item 0 is the lobby itself)
+--press 0xBB:1366@37     # Join (0xBD, the joiner's screen)
+--press 0xBD:1439@41     # Accept
+--waitlog Tooltips@42
+--move 236,208@43        # the cursor onto the battlefield

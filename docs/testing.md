@@ -50,3 +50,26 @@ What the game logs is how a case knows where it is:
 "The picture moving" counts distinct checksums the recorder prints every 100
 recorded frames; at 4K the game draws about 3 frames a second, so those cases
 run 180 seconds.
+
+## TS against TS over the LAN
+
+Two PCs on one subnet, each with the game and its own player name
+(`SUN.INI` `[MultiPlayer] Handle`), each playing a script in the game's own
+input:
+
+```
+build\ts.exe --run --mute --args tools\lan\host.args      # the PC that hosts
+build\ts.exe --run --mute --args tools\lan\joiner.args    # the PC that joins
+```
+
+Both click Firestorm and its menu's Lan; the host goes New (the host screen,
+`0xBC`) and starts with Go! once the joiner is in; the joiner picks the
+host's game in the lobby's list (`0xBB`, item 1), Join and Accept (`0xBD`).
+The dialogs are Red Alert 2's, same IDs. A script file's words are split on
+whitespace, so its `--waitlog` texts are single words (`closed`, from "VQ
+audio handler closed OK"; `Tooltips`, in game).
+
+Checked so far: the host side, to its host screen. Two copies on one PC
+cannot play each other: IPXEmu (the game folder's `wsock32.dll`) binds one
+port, and the second copy's bind fails ("IPX socket bind failed"), so the
+joining side needs a second machine.
