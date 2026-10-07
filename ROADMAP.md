@@ -35,4 +35,4 @@ in order; each is done when its check is in the suite or the docs.
    where Windows' would be (bringup.md 4). Both belong in pcrecomp.
    `--original` needs pcrecomp #51 (the image loader cut `.text` at its
    VirtualSize, and this exe has a patch's code past it) to reach a skirmish.
-10. **Release**: v0.1.0, private.
+10. **Release**: v0.1.0.
