@@ -42,6 +42,7 @@ from lift32 import Lifter                                  # noqa: E402
 from pe_analyze import analyze_pe, build_iat_map           # noqa: E402
 
 EXE = os.path.join(_HERE, 'game', 'Game.exe')
+EXE_STAMP = 0x393C1B12   # Game.exe's PE timestamp, the Steam release (docs/RECON.md)
 CATALOG = os.path.join(_HERE, 'work', 'functions.json')
 SEEDS = os.path.join(_HERE, 'work', 'rtti_seeds.json')
 OUT = os.path.join(_HERE, 'src', 'recomp', 'gen')
@@ -258,6 +259,14 @@ def apply_patches(body, patches):
     return body
 
 
+def exe_stamp(path):
+    """The PE header's TimeDateStamp: which build of the game an exe is."""
+    with open(path, 'rb') as f:
+        head = f.read(4096)
+    nt = int.from_bytes(head[0x3C:0x40], 'little')
+    return int.from_bytes(head[nt + 8:nt + 12], 'little')
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--exe', default=EXE)
@@ -276,6 +285,14 @@ def main():
     if not os.path.exists(args.catalog):
         sys.exit('no catalog at %s -- run disasm32.py first (README, Step by step)' % args.catalog)
 
+    # The patches are at this build's addresses; another build lifts, but
+    # they land in the wrong code, and it crashes in game.
+    stamp = exe_stamp(args.exe)
+    if stamp != EXE_STAMP:
+        sys.exit('%s is not the build this project supports: its PE timestamp is 0x%08X, '
+                 'the Steam release\'s is 0x%08X (docs/RECON.md). A different release '
+                 '(the 2010 freeware, a CD, a CnCNet- or mod-patched exe) needs its own '
+                 'addresses; use the Steam build\'s Game.exe.' % (args.exe, stamp, EXE_STAMP))
     info = analyze_pe(args.exe)
     iat = build_iat_map(info)
     cs, ce = info.code_start, info.code_end

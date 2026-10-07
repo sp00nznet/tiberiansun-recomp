@@ -29,6 +29,7 @@
 extern const uint32_t ts_entry_va;    /* recomp_dispatch.c */
 
 #define TS_IMAGE_BASE 0x00400000u
+#define TS_EXE_STAMP 0x393C1B12u   /* Game.exe's PE timestamp: the build lifted (run_lift.py) */
 /* A NULL module is the process exe, which is the host; mean the guest. */
 #define GUEST_MODULE(h) ((h) ? (h) : TS_IMAGE_BASE)
 static int g_last_dialog;             /* resource ID of the last RT_DIALOG looked up */
@@ -1341,6 +1342,22 @@ int main(int argc, char** argv) {
     printf("Tiberian Sun recomp host\n  lifted functions in dispatch: %u\n",
            recomp_dispatch_count);
 
+    {   /* The lifted C and its patches are one build's: another crashes in game. */
+        uint8_t head[4096] = { 0 };
+        FILE* f = fopen(exe_full, "rb");
+        if (f) { fread(head, 1, sizeof head, f); fclose(f); }
+        uint32_t nt = *(const uint32_t*)(head + 0x3C);
+        uint32_t stamp = nt < sizeof head - 12 ? *(const uint32_t*)(head + nt + 8) : 0;
+        if (stamp != TS_EXE_STAMP) {
+            char msg[MAX_PATH + 256];
+            _snprintf(msg, sizeof msg - 1, "%s is not the build this host was lifted from "
+                      "(PE timestamp 0x%08X, wanted 0x%08X). Lift and build from the Steam "
+                      "release's Game.exe (README, Getting Started).", exe_full, stamp, TS_EXE_STAMP);
+            fprintf(stderr, "%s\n", msg);
+            if (!g_headless) MessageBoxA(NULL, msg, "Tiberian Sun (recomp)", MB_ICONERROR);
+            return 1;
+        }
+    }
     uint32_t span = native32_map(exe_full, TS_IMAGE_BASE);
     if (!span) { fprintf(stderr, "cannot map %s at 0x%08X\n", exe_full, TS_IMAGE_BASE); return 1; }
     printf("  mapped %s: 0x%08X-0x%08X\n", exe, TS_IMAGE_BASE, TS_IMAGE_BASE + span);
