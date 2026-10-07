@@ -796,7 +796,10 @@ static DWORD WINAPI recorder(LPVOID unused) {
         if (g_recorded % 100 == 0) {         /* the playtest counts distinct ones */
             uint32_t sum = 0;
             for (int k = 0; k < w * h; k += 16) sum = sum * 31 + frame[k];
-            fprintf(stderr, "[record] frame %ld checksum %08X\n", g_recorded, sum);
+            /* with the game's own frame count (its "Frame %d, BorrowedTime"
+             * log line's): game frames per 100 recorded (3.3 s) is its frame rate */
+            fprintf(stderr, "[record] frame %ld checksum %08X game frame %u\n", g_recorded, sum,
+                    MEM32(0x007E4924u));
         }
         /* The recording keeps the size it started with (the menus' 800x600);
          * a later mode is scaled into it, nearest neighbour, with its aspect

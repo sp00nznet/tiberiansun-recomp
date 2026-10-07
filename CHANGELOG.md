@@ -6,6 +6,8 @@ versions follow [SemVer](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `--record`'s checksum line prints the game's own frame count, its frame
+  rate (docs/hires.md: about 31 a second in a skirmish, 1080p and 4K alike).
 - HD vehicles: units and their shadows drawn at 2x from four half-pixel-offset renders,
   Red Alert 2's method found again in this renderer (docs/voxels.md); the
   voxel cache is off while they are on. `skirmish-hd` runs with them.

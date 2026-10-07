@@ -44,3 +44,9 @@ frames a second recorded at 1080p, 10 at 1440p and 3 at 4K. That was the
 recorder, which opened its video at the game's first mode and asked x264
 for 4K at 30 frames a second. Recordings are now at most 1280 wide, and 4K
 records as many frames as 1080p (4,880 in three minutes).
+
+The recorder's checksum line also prints the game's own frame count (the
+one its `Frame %d, BorrowedTime` log line prints, `0x007E4924`), so a
+recorded run gives the game's real frame rate. A skirmish at its default
+speed runs about 31 game frames a second at 1080p and at 4K alike: 309 per
+300 recorded frames at both sizes.
