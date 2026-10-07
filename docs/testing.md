@@ -49,6 +49,7 @@ What the game logs is how a case knows where it is:
 | `load-mission` | on the first Nod mission: the in-game menu (`0xB5`), Save Game (`0x2B4`) into the first slot, Abort Mission (`0xB6`), then the main menu's Load Mission (`0xB7`) and the save, back in game |
 | `skirmish-hd` | a skirmish with HD voxels on (`--hd-voxels`) |
 | `campaign-build` | on the first Nod mission: a power plant and a Hand of Nod built from the sidebar and placed, then a light infantry; at least 3 `PRODUCE` and 2 `PLACE` events |
+| `skirmish-build` | a skirmish with Unit Count at its least and `--seed 1`: the MCV selected, moved out of its group and deployed (D), then a power plant, a barracks and a light infantry; a `DEPLOY`, 3 `PRODUCE` and 2 `PLACE` events |
 
 "The picture moving" counts distinct checksums the recorder prints every 100
 recorded frames; the hi-res cases run 180 seconds.

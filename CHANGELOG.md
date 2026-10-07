@@ -6,6 +6,13 @@ versions follow [SemVer](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `skirmish-build`: in a skirmish, the MCV moved out of its group and
+  deployed, then a power plant, a barracks and a light infantry. `--seed N`
+  fixes the game's random seed (a patch after its GetTickCount at
+  `0x004E3A61`), so the start is the same every run; `--select` sets a
+  slider (Unit Count).
+- clang-cl (x86) builds, from pcrecomp `main`: the suite passes 21 of 21.
+- CONTRIBUTING.md, and the README's *What the remaster adds*.
 - `--record`'s checksum line prints the game's own frame count, its frame
   rate (docs/hires.md: about 31 a second in a skirmish, 1080p and 4K alike).
 - HD vehicles: units and their shadows drawn at 2x from four half-pixel-offset renders,

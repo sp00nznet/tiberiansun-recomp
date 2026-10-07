@@ -22,6 +22,7 @@
  */
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <commctrl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -333,6 +334,12 @@ static const char* select_item(int dlg, int ctrl, int n, LONG* shift) {
     HWND c = GetDlgItem(d, ctrl);
     if (!c) return "no such control";
     GetClassNameA(c, cls, sizeof cls);
+    if (!_stricmp(cls, TRACKBAR_CLASSA)) {     /* a slider: N is its position */
+        SendMessageA(c, TBM_SETPOS, TRUE, n);
+        PostMessageA(GetParent(c), (GetWindowLongA(c, GWL_STYLE) & TBS_VERT) ? WM_VSCROLL : WM_HSCROLL,
+                     MAKEWPARAM(TB_ENDTRACK, 0), (LPARAM)c);
+        return "slider";
+    }
     int combo = !_stricmp(cls, "ComboBox");
     SendMessageA(c, combo ? CB_SETCURSEL : LB_SETCURSEL, n, 0);
     PostMessageA(d, WM_COMMAND, MAKEWPARAM(ctrl, combo ? CBN_SELCHANGE : LBN_SELCHANGE), (LPARAM)c);

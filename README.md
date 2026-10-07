@@ -13,6 +13,29 @@ host, the presenter, the scripted input and the test tools come from
 redalert2-recomp; everything tied to an address was found again in this exe
 ([RECON.md](docs/RECON.md)).
 
+## What the remaster adds
+
+Everything here is built around the game's own code, recompiled; `--classic`
+gives the original display, and `--original` runs the shipping machine code
+for comparison.
+
+- **Its own window.** The game draws into a Direct3D 11 presenter instead of
+  taking over the screen: a resizable window or borderless fullscreen (F11),
+  sharp at any size.
+- **Scaling** (F12): sharp-bilinear (the default), smooth, CRT, nearest, or
+  whole multiples only.
+- **A settings menu** (F10): scaling, fullscreen, HD vehicles and the game's
+  resolution, kept in `build\ts.ini`.
+- **High resolution and widescreen**: 1280x720 up to 3840x2160 in game, more
+  of the battlefield on screen; above 1080 lines the sidebar needed a fix
+  (docs/hires.md).
+- **Framed menus**: the 640x400 menus in a widescreen window sit on a blur of
+  themselves instead of black bars.
+- **HD vehicles**: units and their shadows drawn at twice the resolution of
+  the picture, from the game's own voxel models (docs/voxels.md).
+- **Runs anywhere Windows does**: the C runtime is linked in, so no Visual
+  C++ redistributable to install; `--mute` for silent runs.
+
 ## Status: **bring-up, playable.** The whole exe lifts with 0 errors; both games' main menus, skirmishes from 640x400 to 3840x2160, all four campaigns to their first mission with their movies, and building a base, checked by a scripted suite.
 
 | Stage | State |
@@ -20,10 +43,10 @@ redalert2-recomp; everything tied to an address was found again in this exe
 | The build | the Steam release in *The Ultimate Collection*: `Game.exe`, 2000-06-05, no DRM ([RECON.md](docs/RECON.md)) |
 | RTTI class recovery | 807 classes, 895 vtables, 5,226 virtual methods |
 | Function catalog (`disasm32`) | 18,552 functions, 92.0% of `.text` |
-| Lift (`run_lift.py --all`) | 18,559 functions, 3.9M lines of C, **0 lift errors**; 35 patches |
+| Lift (`run_lift.py --all`) | 18,559 functions, 3.9M lines of C, **0 lift errors**; 36 patches |
 | Host (`build/ts.exe`, 32-bit, pcrecomp `native32`) | the logos, the Tiberian Sun / Firestorm choice, both main menus, skirmishes, the GDI and Nod campaigns of both games with their VQA movies, and building and training in a mission ([bringup.md](docs/bringup.md)) |
 | High resolution | 720p, 1080p, 1440p and 4K in game; above 1080 lines the sidebar needed a fix ([hires.md](docs/hires.md)) |
-| Playtest suite (`tools/playtest.py`) | **21 cases**: menus and the Options screens, save and load, skirmish 640x400 to 4K, the four campaigns, a power plant and a Hand of Nod built and placed and an infantryman trained, HD vehicles on; all pass, three at a time ([testing.md](docs/testing.md)) |
+| Playtest suite (`tools/playtest.py`) | **22 cases**: menus and the Options screens, save and load, skirmish 640x400 to 4K, the four campaigns, a base built and an infantryman trained in a mission and in a skirmish (the MCV deployed), HD vehicles on; all pass, three at a time ([testing.md](docs/testing.md)) |
 | Conformance (`tools/conformance.py`) | **8/8** boot milestones to the choice screen, lift 0 errors |
 | Presenter (the default display) | the game in its own Direct3D 11 window, from redalert2-recomp: sharp scaling, blurred bars, clicks mapped into the game; checked with the menus ([presenter.md](docs/presenter.md)) |
 | HD vehicles | units and their shadows at 2x, Red Alert 2's four half-pixel passes found again in this renderer ([voxels.md](docs/voxels.md)) |
@@ -140,7 +163,9 @@ py -3 tools\playtest.py skirmish-start --original   # the same script on the shi
 
 Scripted input (headless): `--click x,y@s` and `--move` in game pixels,
 `--press DLG:CTRL@s` for the dialog screens, `--waitlog TEXT@s` on the game's
-own debug log (`--debuglog` prints it), `--key`, `--drag`. The script's clock
+own debug log (`--debuglog` prints it), `--key`, `--drag`, `--select DLG:CTRL=N@s` (a list, a combo box or a
+slider). `--seed N` fixes the game's random seed, so a skirmish starts the
+same every run. The script's clock
 starts at the game's `Game Init Completed`.
 
 Environment: `TS_EXE` (another build to test), `TS_HOST_ARGS` (extra host
@@ -153,9 +178,13 @@ when the watchdog ends the run).
 
 Steps 5 and 6 above. `PCRECOMP` (environment, for `run_lift.py`) and
 `-DPCRECOMP=` (CMake, through `CMAKE_ARGS` for `build.cmd`) point at a toolkit
-checkout other than `..	ools`; the lifter and the runtime must come from
-the same tree. It builds from pcrecomp `main`; `--original` reaching a
+checkout other than `..\tools`; the lifter and the runtime must come from
+the same tree. It builds from pcrecomp `main`, with MSVC or clang-cl (x86:
+`set CMAKE_ARGS=-DCMAKE_C_COMPILER=clang-cl -DCMAKE_C_FLAGS=-m32` and
+another `BUILD_DIR`; the suite passes on both). `--original` reaching a
 skirmish also needs pcrecomp #51.
+
+Contributions: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

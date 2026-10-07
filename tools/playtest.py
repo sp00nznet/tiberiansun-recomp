@@ -195,9 +195,10 @@ PLACES = [(60, 300), (110, 300), (60, 360), (150, 370), (40, 230), (120, 250), (
 PP, HAND, LIGHT_INF = (527, 245), (527, 300), (590, 195)
 
 
-def place(script):
-    script = script.key('0x24', after=1)           # Home: the view on the base
-    for x, y in PLACES:
+def place(script, spots=PLACES, home=True):
+    if home:
+        script = script.key('0x24', after=1)       # Home: the view on the base
+    for x, y in spots:
         script = script.click(x, y, after=1)
     return script
 
@@ -212,6 +213,26 @@ case('campaign-build',
            .click(*HAND, after=60))                            # ready: pick it up
      .click(*LIGHT_INF, after=3),                              # a light infantry
      240, dialogs=[CAMPAIGN], ingame=True, log={'Adding event PRODUCE': 3, 'Adding event PLACE': 2})
+
+# The same in a skirmish: the fewest starting units and a fixed random seed
+# (--seed), so the start is the same every run; select the MCV, move it out
+# of its group onto open ground and deploy it (D); then a power plant, a
+# barracks and a light infantry, as above. GDI's sidebar: the power plant
+# first, the barracks third (after the refinery), the infantry on the right.
+UNIT_COUNT = 1292
+YARD_SPOTS = [(330, 250), (330, 300), (180, 300), (250, 330), (170, 200), (330, 190), (400, 260),
+              (250, 370), (120, 260), (400, 320), (100, 320), (400, 200)]
+SK_PP, SK_BARRACKS, SK_INF = (527, 198), (527, 297), (590, 198)
+_build = place(place(
+    firestorm().click(*MENU_SKIRMISH, after=4).select(SKIRMISH, UNIT_COUNT, 0).press(SKIRMISH, 'OK')
+    .waitlog('Tooltips are on.').click(222, 132, after=3).click(260, 240, after=2).key('0x44', after=20)
+    .click(*SK_PP, after=3)                                    # power plant
+    .click(*SK_PP, after=30), YARD_SPOTS, home=False)          # ready: pick it up
+    .click(*SK_BARRACKS, after=3)                              # barracks
+    .click(*SK_BARRACKS, after=60), YARD_SPOTS, home=False).click(*SK_INF, after=3)
+_build.args += ['--seed', '1']
+case('skirmish-build', _build, 240, dialogs=[SKIRMISH], ingame=True,
+     log={'Adding event DEPLOY': 1, 'Adding event PRODUCE': 3, 'Adding event PLACE': 2})
 
 # HD voxels on (the presenter's default; --hd-voxels headless): a skirmish
 # and the build case, the game unchanged by it.

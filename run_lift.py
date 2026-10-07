@@ -91,6 +91,10 @@ PATCHES = {
     # x = 0x7610D720 and faulted (docs/bringup.md). An empty rect instead.
     0x00570C91: ('MEM32(esp + 0xC) = MEM32(esp + 0x10) = MEM32(esp + 0x14) = MEM32(esp + 0x18) = 0; '
                  '/* fix: run_lift.py PATCHES */'),
+    # The game's random seed is GetTickCount() (stored at 0x007E4934, logged
+    # as "Seed is %08x"), so a skirmish starts differently every run. The
+    # host's --seed N fixes it, for tests that click on a unit.
+    0x004E3A61: '{ extern uint32_t ts_seed; if (ts_seed) eax = ts_seed; } /* host --seed */',
 }
 
 

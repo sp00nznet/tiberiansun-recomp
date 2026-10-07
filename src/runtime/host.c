@@ -1033,6 +1033,7 @@ static native32_shim_t g_headless_shims[] = {
  * prints it: printf-style, the arguments read straight off the guest stack
  * (a cdecl va_list on x86 is a pointer to the first variadic slot). */
 static int g_debuglog;
+uint32_t ts_seed;                 /* --seed N: the game's random seed (run_lift.py PATCHES) */
 
 /* --mute: this process's audio session at zero (Vista and later: waveOut's
  * volume is the session's, and DirectSound and Bink play in the same
@@ -1253,6 +1254,7 @@ int main(int argc, char** argv) {
             g_scale_mode = present_mode_from_name(argv[++i]);
         else if (!strcmp(argv[i], "--debuglog")) g_debuglog = 1;
         else if (!strcmp(argv[i], "--hd-voxels")) hdvox_configure(1, NULL);
+        else if (!strcmp(argv[i], "--seed") && i + 1 < argc) ts_seed = strtoul(argv[++i], NULL, 0);
         else if (!strcmp(argv[i], "--mute")) CloseHandle(CreateThread(NULL, 0, mute_thread, NULL, 0, NULL));
         else if (!strcmp(argv[i], "--hd-voxels-dump") && i + 1 < argc) {
             static char dir[MAX_PATH];

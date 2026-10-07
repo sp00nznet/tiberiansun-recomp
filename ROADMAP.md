@@ -6,19 +6,11 @@ in order; each is done when its check is in the suite or the docs.
 1. **The presenter's settings** in a window: F10's resolution entry into a
    skirmish at that size, fullscreen, the scalings. (The window, its
    scaling, bars and click mapping are checked: docs/presenter.md.)
-2. **Play, not just reach.** Done on the first Nod mission
-   (`campaign-build`: a power plant, a Hand of Nod, a light infantry). Left:
-   the same in a skirmish (RA2's `skirmish-build`). Found so far: band selection and move orders by mouse
-   work; the MCV is placed (a probe on its Unlimbo), but the start differs
-   per run (the random seed is not fixed) and move orders print no event
-   line. Band-selecting everything and pressing D deploys what can deploy
-   (`Adding event DEPLOY`: the Juggernauts became artillery), but no MCV is
-   among the starting units at first sight. It is there: the generator places
-   it (`0x005DEC07`, at a start waypoint) and it is the long vehicle with a
-   grey crane in the middle of the group, boxed in by infantry. D with
-   everything selected orders it to deploy, but it has no room; scatter (X)
-   and moving the group did not clear enough. Next: select the MCV alone
-   (its cell from the generator, or SelectSameType), on open ground.
+2. **Play, not just reach.** Done in a mission (`campaign-build`) and in a
+   skirmish (`skirmish-build`: the MCV deployed, a power plant, a barracks
+   and a light infantry). A skirmish starts the same every run with
+   `--seed`; the MCV was boxed in by its own units, so the case moves it
+   out first.
 3. **The campaigns.** Done to the first mission, all four
    (`campaign-*`). Next: a mission played to its win.
 4. **The rest of the menus.** Done: Options and its five screens

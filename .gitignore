@@ -54,6 +54,7 @@ Desktop.ini
 # Made by Setup.cmd
 Tiberian Sun (recomp).cmd
 build-trace/
+build-clang/
 
 # LAN game frames (tools/lan/*.args)
 lan-frames/
