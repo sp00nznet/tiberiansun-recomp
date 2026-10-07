@@ -52,6 +52,7 @@ What the game logs is how a case knows where it is:
 | `campaign-fs-gdi`, `campaign-fs-nod`, `campaign-ts-gdi`, `campaign-ts-nod` | each campaign to its first mission: the campaign dialog (`0x94`, its list), OK, Escape once the first movie opens |
 | `load-mission` | on the first Nod mission: the in-game menu (`0xB5`), Save Game (`0x2B4`) into the first slot, Abort Mission (`0xB6`), then the main menu's Load Mission (`0xB7`) and the save, back in game |
 | `skirmish-hd` | a skirmish with HD voxels on (`--hd-voxels`) |
+| `skirmish-hd-debris` | as Nod (`--seed 1`), the cyborgs set on their own Attack Cycle (Ctrl+click); its tyre, a voxel animation, is drawn at 2x (`[hdvox] the first voxel animation at 2x`) |
 | `campaign-build` | on the first Nod mission: a power plant and a Hand of Nod built from the sidebar and placed, then a light infantry; at least 3 `PRODUCE` and 2 `PLACE` events |
 | `skirmish-build` | a skirmish with Unit Count at its least and `--seed 1`: the MCV selected, moved out of its group and deployed (D), then a power plant, a barracks and a light infantry; a `DEPLOY`, 3 `PRODUCE` and 2 `PLACE` events |
 | `skirmish-forcefire` | the same start: the group band-selected (`--drag`), then Ctrl+click (force-fire) on open ground; the game logs no event for either, so the sheet is the check: every unit boxed, a crater where they fired |

@@ -31,8 +31,9 @@ for comparison.
   (docs/hires.md).
 - **Framed menus**: the 640x400 menus in a widescreen window sit on a blur of
   themselves instead of black bars.
-- **HD vehicles**: units and their shadows drawn at twice the resolution of
-  the picture, from the game's own voxel models (docs/voxels.md).
+- **HD vehicles**: units, their shadows and voxel debris drawn at twice the
+  resolution of the picture, from the game's own voxel models
+  (docs/voxels.md).
 - **Runs anywhere Windows does**: the C runtime is linked in, so no Visual
   C++ redistributable to install; `--mute` for silent runs.
 
@@ -43,13 +44,13 @@ for comparison.
 | The build | the Steam release in *The Ultimate Collection*: `Game.exe`, 2000-06-05, no DRM ([RECON.md](docs/RECON.md)) |
 | RTTI class recovery | 807 classes, 895 vtables, 5,226 virtual methods |
 | Function catalog (`disasm32`) | 18,552 functions, 92.0% of `.text` |
-| Lift (`run_lift.py --all`) | 18,559 functions, 3.9M lines of C, **0 lift errors**; 36 patches |
+| Lift (`run_lift.py --all`) | 18,559 functions, 3.9M lines of C, **0 lift errors**; 45 patches |
 | Host (`build/ts.exe`, 32-bit, pcrecomp `native32`) | the logos, the Tiberian Sun / Firestorm choice, both main menus, skirmishes, the GDI and Nod campaigns of both games with their VQA movies, and building and training in a mission ([bringup.md](docs/bringup.md)) |
 | High resolution | 720p, 1080p, 1440p and 4K in game; above 1080 lines the sidebar needed a fix ([hires.md](docs/hires.md)) |
-| Playtest suite (`tools/playtest.py`) | **28 cases**: every main-menu entry (LAN, Internet and World Domination Tour as far as they go without servers, Back, Exit) and the Options screens, save and load, skirmish 640x400 to 4K, the four campaigns, a base built and an infantryman trained in a mission and in a skirmish (the MCV deployed), band selection and force-fire, HD vehicles on; all pass, three at a time ([testing.md](docs/testing.md)) |
+| Playtest suite (`tools/playtest.py`) | **29 cases**: every main-menu entry (LAN, Internet and World Domination Tour as far as they go without servers, Back, Exit) and the Options screens, save and load, skirmish 640x400 to 4K, the four campaigns, a base built and an infantryman trained in a mission and in a skirmish (the MCV deployed), band selection and force-fire, HD vehicles and voxel debris on; all pass, three at a time ([testing.md](docs/testing.md)) |
 | Conformance (`tools/conformance.py`) | **8/8** boot milestones to the choice screen, lift 0 errors |
 | Presenter (the default display) | the game in its own Direct3D 11 window, from redalert2-recomp: sharp scaling, blurred bars, clicks mapped into the game; checked with the menus ([presenter.md](docs/presenter.md)) |
-| HD vehicles | units and their shadows at 2x, Red Alert 2's four half-pixel passes found again in this renderer ([voxels.md](docs/voxels.md)) |
+| HD vehicles | units, their shadows and voxel debris at 2x, Red Alert 2's four half-pixel passes found again in this renderer ([voxels.md](docs/voxels.md)) |
 
 Three walls so far, each in [bringup.md](docs/bringup.md): a gadget rect the
 game never initialised (a crash on a quarter of runs, from the first mouse

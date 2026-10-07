@@ -21,7 +21,9 @@ UnitClass Draw_It            0x00652330  points [0x0074C5E4] at the staging surf
       blit into staging      0x0047CC10  with the remap
   copy staging out           0x00651F50 (vtable +0x3C8) -> 0x00423530, three call sites
 shadow                       0x00635E20  its own render and blit
-voxel projectiles            0x004472C0  (BulletClass Draw_It, 0x00445C00)
+voxel projectiles            0x004472C0  (BulletClass Draw_It, 0x00445C00; the type's +0xCF)
+voxel animations and debris  0x0065E050  (VoxelAnimClass Draw_It): shadow, then body,
+                                         each finished by 0x00666500
 ```
 
 | What | Where | |
@@ -83,5 +85,22 @@ blitted onto the battlefield by `0x0047CC10` with the shadow converter. The
 darkened the way the 1x one is. Most of a shadow is under its unit; what
 shows at 2x is its edge.
 
-Not yet: voxel projectiles (`0x004472C0`, from BulletClass's Draw_It) and
-voxel animations and debris stay 1x until a test puts one on screen.
+**Voxel animations and debris** (`0x0065E050`, VoxelAnimClass's Draw_It)
+render a shadow and then the body through their own finish, `0x00666500`
+(`ecx` its rect at `esp+0x44`, `edx` `esp+0x20`, one stack argument
+`esp+0x1C`, `ret 4`), run three more times like the units' with its outputs
+(`esp+0x1C` to `esp+0x5C`) put back; both are blitted by `0x0047CC10`
+straight onto the battlefield. Debris comes from a type's `DebrisTypes`
+(vehicles with wheels: `TIRE`) and from exploding overlay; `skirmish-hd-debris`
+destroys an Attack Cycle and its tyre is drawn at 2x.
+
+`0x0047CC10`'s destination point is in a window, its fourth argument (passed
+on to `0x00423530`): the tactical view's starts 16 pixels down, below the
+top bar. Every blit the host watches straight onto the battlefield (debris,
+shadows, projectiles) is placed in that window.
+
+**Voxel projectiles** (`0x004472C0`, from BulletClass's Draw_It when the
+type's voxel flag, `+0xCF`, is set) go the same way, with the units' finish
+(`ecx = esp+0x34`). The only voxel projectiles are the missile silo's two
+superweapon missiles (`ChemMissile`, `MultiMissile`); no test fires one yet,
+so they are opt-in, `TS_HD_VOXEL_PROJECTILES=1`.

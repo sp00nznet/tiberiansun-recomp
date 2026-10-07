@@ -19,9 +19,10 @@ in order; each is done when its check is in the suite or the docs.
    own "Westwood online support library is missing" message: as far as
    they go without servers. Serial / Modem is not in the suite (it probes
    the PC's real modems).
-5. **HD voxels.** Done for units and their shadows (docs/voxels.md).
-   Left: voxel projectiles (`0x004472C0`, BulletClass), voxel animations
-   and debris, each with a test that puts one on screen.
+5. **HD voxels.** Done for units, their shadows and voxel animations and
+   debris (`skirmish-hd-debris`; docs/voxels.md). Left: voxel projectiles
+   are hooked but opt-in (`TS_HD_VOXEL_PROJECTILES=1`): the only ones are
+   the missile silo's two superweapon missiles, and no test fires one yet.
 6. **Speed at 4K**. Done: it was the recorder encoding 4K video, not the
    game (docs/hires.md).
 7. **Setup.cmd end to end** from a clean folder. Done (a fresh clone with

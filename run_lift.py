@@ -109,13 +109,13 @@ PATCHES = {
 TAG = '/* remaster: HD voxels, run_lift.py HD_VOXEL_PATCHES */'
 
 
-def _hd_passes(arg):
+def _hd_passes(arg, begin='ts_vox_hd_begin'):
     """C for the three extra runs of 0x00666720, ecx = esp + arg each time
     (it fills the 6-dword rect at ecx and returns it in eax)."""
-    return ('{ extern int ts_vox_hd_begin(uint32_t); extern void ts_vox_hd_pass(int); '
+    return ('{ extern int %s(uint32_t); extern void ts_vox_hd_pass(int); '
             'extern uint32_t ts_vox_hd_end(void); '
-            'if (ts_vox_hd_begin(eax)) { for (int _k = 1; _k < 4; _k++) { ts_vox_hd_pass(_k); '
-            'ecx = esp + 0x%X; RECOMP_CALL(sub_00666720); } eax = ts_vox_hd_end(); } } ' % arg + TAG)
+            'if (%s(eax)) { for (int _k = 1; _k < 4; _k++) { ts_vox_hd_pass(_k); '
+            'ecx = esp + 0x%X; RECOMP_CALL(sub_00666720); } eax = ts_vox_hd_end(); } } ' % (begin, begin, arg) + TAG)
 
 
 def _hd_blit():
@@ -127,6 +127,18 @@ def _hd_blit():
 def _hd_blitted():
     return '{ extern void ts_vox_hd_blitted(void); ts_vox_hd_blitted(); } ' + TAG
 
+
+
+def _hd_passes_666500():
+    """C for the three extra runs of 0x00666500, the finish voxel animations
+    and debris use: ecx = esp+0x44 (its rect), edx = esp+0x20, one stack
+    argument esp+0x1C (ret 4). Its outputs, esp+0x1C to esp+0x5C, are put
+    back afterwards."""
+    return ('{ extern int ts_vox_hd_begin_at(uint32_t, uint32_t); extern void ts_vox_hd_pass(int); '
+            'extern uint32_t ts_vox_hd_end(void); uint32_t _eax = eax; '
+            'if (ts_vox_hd_begin_at(esp + 0x1C, 0x40)) { for (int _k = 1; _k < 4; _k++) { ts_vox_hd_pass(_k); '
+            'ecx = esp + 0x44; edx = esp + 0x20; esp -= 4; MEM32(esp) = esp + 4 + 0x1C; '
+            'RECOMP_CALL(sub_00666500); } ts_vox_hd_end(); } eax = _eax; } ' + TAG)
 
 
 def _hd_copy():
@@ -176,6 +188,20 @@ HD_VOXEL_PATCHES = {
     0x00635ECF: _hd_passes(0x28),
     0x00635F6E: '{ extern void ts_vox_shadow_blit(uint32_t, uint32_t); ts_vox_shadow_blit(ecx, esp); } ' + TAG,
     0x00635F6F: '{ extern void ts_vox_shadow_blitted(void); ts_vox_shadow_blitted(); } ' + TAG,
+    # Voxel projectiles: BulletClass's Draw_It (0x00445C00) draws one through
+    # 0x004472C0, the same finish (ecx = esp+0x34) and a blit by 0x0047CC10
+    # straight onto the battlefield. Opt-in (TS_HD_VOXEL_PROJECTILES=1).
+    0x00447387: _hd_passes(0x34, 'ts_vox_bullet_begin'),
+    0x0044741C: '{ extern void ts_vox_bullet_blit(uint32_t, uint32_t, uint32_t); ts_vox_bullet_blit(ecx, edx, esp); } ' + TAG,
+    0x00447422: _hd_blitted(),
+    # Voxel animations and debris (0x0065E050, their Draw_It): a shadow, then
+    # the body, each finished by 0x00666500 and blitted onto the battlefield.
+    0x0065E1C5: _hd_passes_666500(),
+    0x0065E236: '{ extern void ts_vox_shadow_blit(uint32_t, uint32_t); ts_vox_shadow_blit(ecx, esp); } ' + TAG,
+    0x0065E237: '{ extern void ts_vox_shadow_blitted(void); ts_vox_shadow_blitted(); } ' + TAG,
+    0x0065E2AC: _hd_passes_666500(),
+    0x0065E39D: '{ extern void ts_vox_anim_blit(uint32_t, uint32_t, uint32_t); ts_vox_anim_blit(ecx, edx, esp); } ' + TAG,
+    0x0065E39F: _hd_blitted(),
     # 0x0048B590, DSurface's copy from another surface: into the primary,
     # it ends a frame, and the host publishes the 2x layer built during it.
     0x0048B590: '{ extern void ts_vox_frame_blit(uint32_t, uint32_t); ts_vox_frame_blit(ecx, esp + 4); } ' + TAG,

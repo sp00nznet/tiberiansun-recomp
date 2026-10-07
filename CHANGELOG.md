@@ -6,6 +6,11 @@ versions follow [SemVer](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- HD voxel animations and debris (`0x0065E050`, VoxelAnimClass's Draw_It:
+  its own finish, `0x00666500`, three more times, and its shadow and body
+  blits watched), on with HD voxels; `skirmish-hd-debris` puts a tyre on
+  screen. Voxel projectiles (`0x004472C0`) the same way, opt-in
+  (`TS_HD_VOXEL_PROJECTILES=1`) until a test fires a missile silo.
 - `skirmish-build`: in a skirmish, the MCV moved out of its group and
   deployed, then a power plant, a barracks and a light infantry. `--seed N`
   fixes the game's random seed (a patch after its GetTickCount at
@@ -44,6 +49,9 @@ versions follow [SemVer](https://semver.org/).
   report every call.
 
 ### Fixed
+- HD voxel shadows (and anything blitted straight onto the battlefield)
+  were read 16 pixels too high: `0x0047CC10`'s point is in its window,
+  the tactical view below the top bar (its fourth argument).
 - 4K looked like 3 frames a second: `--record` opened its video at the
   game's mode and x264 could not keep up. Recordings are at most 1280 wide.
 - Crashes now and then while a movie played (the display driver inside a

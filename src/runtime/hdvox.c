@@ -123,22 +123,11 @@ int ts_vox_hd_begin(uint32_t rect) {
     return hd_begin(rect, 24, memo_rect((const uint32_t*)(uintptr_t)rect));
 }
 
-/* After 0x007542F0, which writes its results through pointers: save is the
- * caller's region holding them; the memo's rect is the buffer's bounding
- * box (0x00B2FB60: x, y, w, h, inclusive), which every finish stage sets. */
-static long g_anim_renders;
-
-/* Voxel animations and debris are opt-in, TS_HD_VOXEL_ANIMS=1: the path is
- * the same as units' and shadows', but no test yet puts one on screen. */
-static int anims_on(void) {
-    static int on = -1;
-    if (on < 0) on = getenv("TS_HD_VOXEL_ANIMS") != NULL;
-    return on && ts_vox_hd_on;
-}
-
+/* After 0x00666500 (voxel animations and debris), which writes its results
+ * through pointers: save is the caller's region holding them; the memo's
+ * rect is the buffer's bounding box (VOX_BBOX), which every finish sets. */
 int ts_vox_hd_begin_at(uint32_t save, uint32_t len) {
-    if (!anims_on()) return 0;
-    g_anim_renders++;
+    if (!ts_vox_hd_on) return 0;
     g_mx = (int)VOX_BBOX[0], g_my = (int)VOX_BBOX[1], g_mw = (int)VOX_BBOX[2] + 1, g_mh = (int)VOX_BBOX[3] + 1;
     int ok = g_mx >= 0 && g_my >= 0 && g_mw > 0 && g_mh > 0 && g_mx + g_mw <= 256 && g_my + g_mh <= 256;
     return hd_begin(save, len, ok);
@@ -234,13 +223,14 @@ static uint8_t* staging_px(void) { return (uint8_t*)(uintptr_t)((const uint32_t*
 
 static int g_direct_open, g_dir_x, g_dir_y, g_dir_w, g_dir_h, g_dir_sx, g_dir_sy;
 static uint32_t g_dir_dest;
-static long g_direct;
-static void direct_blit(uint32_t dest, const int32_t* r, const int32_t* pt);
+static long g_direct, g_bullets, g_anims;
+static long* g_count;                     /* where the next direct record is counted */
+static void direct_blit(uint32_t dest, const uint32_t* a);
 static int dsurf_read(uint32_t ds, int x, int y, int w, int h, uint16_t* out);
 static void record_image(int x, int y, int w, int h, const uint8_t* idx1, int s1, const uint8_t* idx2, int s2);
 static uint16_t g_before[480 * 1024], g_after[480 * 1024];
 
-/* 0x00707233, before 0x004AF2A0: ecx the destination, then on the stack the
+/* 0x00635DE9 (and the direct blits), before 0x0047CC10: ecx the destination, then on the stack the
  * source surface, its rect (x, y, w, h) and the destination point. */
 void ts_vox_hd_blit(uint32_t dest, uint32_t convert, uint32_t esp) {
     const uint32_t* a = (const uint32_t*)(uintptr_t)esp;
@@ -251,7 +241,7 @@ void ts_vox_hd_blit(uint32_t dest, uint32_t convert, uint32_t esp) {
     g_direct_open = 0;
     if (!ts_vox_hd_on) return;
     if (dest != STAGING) {                        /* aircraft: straight onto the battlefield */
-        direct_blit(dest, r, pt);
+        direct_blit(dest, a);
         return;
     }
     if (!staging_px()) return;
@@ -277,6 +267,7 @@ void ts_vox_hd_blitted(void) {
             record_image(g_dir_x, g_dir_y, g_dir_w, g_dir_h, VOX_COLOUR + g_dir_sy * 256 + g_dir_sx, 256,
                          ts_vox_hd + 2 * g_dir_sy * 512 + 2 * g_dir_sx, 512);
         g_direct++;
+        g_count = NULL;
         return;
     }
     if (!g_stamp_open) return;
@@ -340,18 +331,34 @@ static void rec_commit(void) {
 
 /* g_before, g_after: the battlefield around a draw (declared above) */
 
-/* An aircraft's part, blitted by 0x004AF2A0 straight onto the 16-bit
- * battlefield: the battlefield around it before (and after, in
- * ts_vox_hd_blitted) the blit. */
-static void direct_blit(uint32_t dest, const int32_t* r, const int32_t* pt) {
+/* Where 0x0047CC10 puts a voxel-buffer rect r at pt on the 16-bit surface
+ * ds: pt is in its window (the stack's fourth argument, x, y, w, h; the
+ * tactical view's starts below the top bar), clipped to the window. The
+ * surface rect in x..h, the voxel-buffer corner in sx, sy; 0 if none. */
+static int place(const uint32_t* ds, const uint32_t* a, int* x, int* y, int* w, int* h, int* sx, int* sy) {
+    const int32_t *r = (const int32_t*)(uintptr_t)a[1], *pt = (const int32_t*)(uintptr_t)a[2];
+    const int32_t* win = (const int32_t*)(uintptr_t)a[3];
+    int wx = 0, wy = 0, ww = (int)ds[1], wh = (int)ds[2];
+    if (win) wx = win[0], wy = win[1], ww = win[2], wh = win[3];
+    *x = pt[0], *y = pt[1], *w = r[2], *h = r[3], *sx = r[0], *sy = r[1];
+    if (*x < 0) *sx -= *x, *w += *x, *x = 0;
+    if (*y < 0) *sy -= *y, *h += *y, *y = 0;
+    if (*x + *w > ww) *w = ww - *x;
+    if (*y + *h > wh) *h = wh - *y;
+    *x += wx, *y += wy;
+    if (*x + *w > (int)ds[1]) *w = (int)ds[1] - *x;
+    if (*y + *h > (int)ds[2]) *h = (int)ds[2] - *y;
+    return *x >= 0 && *y >= 0 && *w > 0 && *h > 0 && *w <= 1024 && *h <= 480 &&
+           *sx >= 0 && *sy >= 0 && *sx + *w <= 256 && *sy + *h <= 256;
+}
+
+/* An aircraft's part, a voxel projectile or a voxel animation, blitted by
+ * 0x0047CC10 straight onto the 16-bit battlefield: the battlefield around it
+ * before (and after, in ts_vox_hd_blitted) the blit. */
+static void direct_blit(uint32_t dest, const uint32_t* a) {
     const uint32_t* ds = (const uint32_t*)(uintptr_t)dest;
-    if (ds[4] != 2) return;
-    int x = pt[0], y = pt[1], w = r[2], h = r[3], sx = r[0], sy = r[1];
-    if (x < 0) sx -= x, w += x, x = 0;
-    if (y < 0) sy -= y, h += y, y = 0;
-    if (x + w > (int)ds[1]) w = (int)ds[1] - x;
-    if (y + h > (int)ds[2]) h = (int)ds[2] - y;
-    if (w <= 0 || h <= 0 || w > 1024 || h > 480 || sx < 0 || sy < 0 || sx + w > 256 || sy + h > 256) return;
+    int x, y, w, h, sx, sy;
+    if (ds[4] != 2 || !place(ds, a, &x, &y, &w, &h, &sx, &sy)) return;
     if (!dsurf_read(dest, x, y, w, h, g_before)) return;
     g_dir_dest = dest, g_dir_x = x, g_dir_y = y, g_dir_w = w, g_dir_h = h, g_dir_sx = sx, g_dir_sy = sy;
     g_direct_open = 1;
@@ -377,6 +384,8 @@ static void record_image(int x, int y, int w, int h, const uint8_t* idx1, int s1
     uint16_t *E, *O;
     uint8_t* m;
     if (!rec_new(x, y, w, h, &E, &O, &m)) return;
+    if (g_count && !(*g_count)++)
+        fprintf(stderr, "[hdvox] the first %s at 2x\n", g_count == &g_bullets ? "voxel projectile" : "voxel animation");
     for (int j = 0; j < h; j++)
         for (int i = 0; i < w; i++) {
             int p = j * w + i;
@@ -427,7 +436,7 @@ static int dsurf_read(uint32_t ds, int x, int y, int w, int h, uint16_t* out) {
     return ok;
 }
 
-/* 0x0073B43F, before 0x004373B0: ecx the battlefield surface; on the stack the
+/* 0x00652219 (and two more), before 0x00423530: ecx the battlefield surface; on the stack the
  * destination rect, the staging surface, the (clipped) source rect. */
 void ts_vox_unit_copy(uint32_t dest, uint32_t esp) {
     const uint32_t* a = (const uint32_t*)(uintptr_t)esp;
@@ -489,7 +498,7 @@ void ts_vox_unit_copied(void) {
 }
 
 /* ---- 3b. shadows --------------------------------------------------------------------- */
-/* 0x00707280 renders a unit's shadow as a 0/1 mask in the voxel buffer (at
+/* 0x00635E20 renders a unit's shadow as a 0/1 mask in the voxel buffer (at
  * 2x too, through the same passes) and blits it onto the battlefield with
  * the shadow converter, which darkens what is there. Around that blit the
  * host learns the darkening from the battlefield before and after, and
@@ -500,22 +509,16 @@ static int g_sh_open, g_sh_x, g_sh_y, g_sh_w, g_sh_h, g_sh_sx, g_sh_sy;
 static uint32_t g_sh_dest;
 static long g_sh_records, g_sh_skipped;
 
-/* 0x00707431, before 0x004AF2A0: ecx the destination; on the stack the voxel
+/* 0x00635F6E (and 0x0065E236), before 0x0047CC10: ecx the destination; on the stack the voxel
  * surface, the shadow's rect in it and the destination point. */
 void ts_vox_shadow_blit(uint32_t dest, uint32_t esp) {
     const uint32_t* a = (const uint32_t*)(uintptr_t)esp;
-    const int32_t* r = (const int32_t*)(uintptr_t)a[1];
-    const int32_t* pt = (const int32_t*)(uintptr_t)a[2];
     const uint32_t* ds = (const uint32_t*)(uintptr_t)dest;
     g_sh_open = 0;
     if (!ts_vox_hd_on || a[0] != VOX_SURF) return;
     if (ds[4] != 2) { g_sh_skipped++; return; }  /* not the 16-bit battlefield */
-    int x = pt[0], y = pt[1], w = r[2], h = r[3], sx = r[0], sy = r[1];
-    if (x < 0) sx -= x, w += x, x = 0;
-    if (y < 0) sy -= y, h += y, y = 0;
-    if (x + w > (int)ds[1]) w = (int)ds[1] - x;
-    if (y + h > (int)ds[2]) h = (int)ds[2] - y;
-    if (w <= 0 || h <= 0 || w > 1024 || h > 480 || sx < 0 || sy < 0 || sx + w > 256 || sy + h > 256) return;
+    int x, y, w, h, sx, sy;
+    if (!place(ds, a, &x, &y, &w, &h, &sx, &sy)) return;
     if (!dsurf_read(dest, x, y, w, h, g_before)) return;
     g_sh_dest = dest, g_sh_x = x, g_sh_y = y, g_sh_w = w, g_sh_h = h, g_sh_sx = sx, g_sh_sy = sy;
     g_sh_open = 1;
@@ -583,16 +586,27 @@ void ts_vox_shadow_blitted(void) {
     g_sh_records++;
 }
 
-/* VoxelAnimClass::Draw_It's two blits: the shadow's and the body's (straight
- * onto the battlefield), recorded like a unit's when animations are on. */
-void ts_vox_anim_shadow_blit(uint32_t dest, uint32_t esp) { if (anims_on()) ts_vox_shadow_blit(dest, esp); }
-void ts_vox_anim_shadow_blitted(void) { if (anims_on()) ts_vox_shadow_blitted(); }
-void ts_vox_anim_blit(uint32_t dest, uint32_t convert, uint32_t esp) { if (anims_on()) ts_vox_hd_blit(dest, convert, esp); }
-void ts_vox_anim_blitted(void) { if (anims_on()) ts_vox_hd_blitted(); }
+/* Voxel projectiles (0x004472C0) and voxel animations and debris
+ * (0x0065E050) blit straight onto the battlefield, as aircraft do; their
+ * shadows (animations only) go through ts_vox_shadow_blit. */
+/* Projectiles are opt-in, TS_HD_VOXEL_PROJECTILES=1: the only voxel ones are
+ * the missile silo's (ChemMissile, MultiMissile), and no test fires one yet. */
+static int bullets_on(void) {
+    static int on = -1;
+    if (on < 0) on = getenv("TS_HD_VOXEL_PROJECTILES") != NULL;
+    return on;
+}
+int ts_vox_bullet_begin(uint32_t rect) { return bullets_on() && ts_vox_hd_begin(rect); }
+void ts_vox_bullet_blit(uint32_t dest, uint32_t convert, uint32_t esp) {
+    if (!bullets_on()) return;
+    ts_vox_hd_blit(dest, convert, esp);
+    g_count = &g_bullets;
+}
+void ts_vox_anim_blit(uint32_t dest, uint32_t convert, uint32_t esp) { ts_vox_hd_blit(dest, convert, esp); g_count = &g_anims; }
 
 /* ---- 4. the frame ------------------------------------------------------------------ */
 
-/* 0x004373B0 entry: a copy into the frame surface ends the frame. */
+/* 0x0048B590 entry: a copy into the frame surface ends the frame. */
 void ts_vox_frame_blit(uint32_t dest, uint32_t argp) {
     (void)argp;
     static int empty_copies, stats = -1;
@@ -682,12 +696,12 @@ void hdvox_compose(const uint8_t* frame16, int pitch, int w, int h, uint32_t* ou
         LARGE_INTEGER hz;
         QueryPerformanceFrequency(&hz);
         double n = g_published_frames > 1 ? (double)(g_published_frames - 1) : 1.0;
-        fprintf(stderr, "[hdvox] %ld frames, %ld records (%ld shadows, %ld aircraft parts, %ld shadows not on the battlefield); "
+        fprintf(stderr, "[hdvox] %ld frames, %ld records (%ld shadows, %ld parts straight onto the battlefield, %ld shadows not on the battlefield); "
                 "2x pixels shown: units %ld of %ld, shadows %ld of %ld; "
-                "%.1f ms a frame, %.2f of it the 2x renders (%ld renders, %ld from memory, %ld voxel animation renders)\n",
+                "%.1f ms a frame, %.2f of it the 2x renders (%ld renders, %ld from memory, %ld projectiles, %ld voxel animations)\n",
                 g_published_frames, g_records, g_sh_records, g_direct,
                 g_sh_skipped, matched[0], offered[0], matched[1], offered[1],
                 1000.0 * g_frame_ticks / hz.QuadPart / n, 1000.0 * g_hd_ticks / hz.QuadPart / n,
-                g_memo_hits + g_memo_misses, g_memo_hits, g_anim_renders);
+                g_memo_hits + g_memo_misses, g_memo_hits, g_bullets, g_anims);
     }
 }

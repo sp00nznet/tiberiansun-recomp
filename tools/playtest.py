@@ -258,6 +258,14 @@ case('skirmish-build', _build, 240, dialogs=[SKIRMISH], ingame=True,
 _hd = firestorm().click(*MENU_SKIRMISH, after=4).press(SKIRMISH, 'OK')
 _hd.args.append('--hd-voxels')
 case('skirmish-hd', _hd, 90, dialogs=[SKIRMISH], ingame=True)
+# Voxel debris: as Nod (the Side combo, 1289), the cyborgs band-selected
+# and set on their own Attack Cycle (Ctrl+click), whose tyre (TIRE, a voxel
+# animation) lands and is drawn at 2x.
+_hdff = (firestorm().click(*MENU_SKIRMISH, after=4).select(SKIRMISH, 1289, 1).press(SKIRMISH, 'OK')
+         .waitlog('Tooltips are on.').drag(255, 100, 290, 160, after=3).click(195, 127, after=3, mods='c'))
+_hdff.args += ['--seed', '1', '--hd-voxels']
+case('skirmish-hd-debris', _hdff, 90, dialogs=[SKIRMISH], ingame=True,
+     log={'[hdvox] the first voxel animation at 2x': 1})
 
 # Save and load: on the first Nod mission, Escape opens the in-game menu (a
 # dialog, 0xB5); Save Game (0x2B4) into the first slot, Abort Mission, then
