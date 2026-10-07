@@ -231,6 +231,12 @@ _build = place(place(
     .click(*SK_BARRACKS, after=3)                              # barracks
     .click(*SK_BARRACKS, after=60), YARD_SPOTS, home=False).click(*SK_INF, after=3)
 _build.args += ['--seed', '1']
+# Orders by mouse on the same start: band-select the group, then Ctrl+click
+# (force-fire) on open ground below it.
+_ff = (firestorm().click(*MENU_SKIRMISH, after=4).select(SKIRMISH, UNIT_COUNT, 0).press(SKIRMISH, 'OK')
+       .waitlog('Tooltips are on.').drag(130, 50, 320, 180, after=3).click(260, 260, after=2, mods='c'))
+_ff.args += ['--seed', '1']
+case('skirmish-forcefire', _ff, 60, dialogs=[SKIRMISH], ingame=True)
 case('skirmish-build', _build, 240, dialogs=[SKIRMISH], ingame=True,
      log={'Adding event DEPLOY': 1, 'Adding event PRODUCE': 3, 'Adding event PLACE': 2})
 

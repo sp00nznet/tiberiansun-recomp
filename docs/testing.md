@@ -50,6 +50,7 @@ What the game logs is how a case knows where it is:
 | `skirmish-hd` | a skirmish with HD voxels on (`--hd-voxels`) |
 | `campaign-build` | on the first Nod mission: a power plant and a Hand of Nod built from the sidebar and placed, then a light infantry; at least 3 `PRODUCE` and 2 `PLACE` events |
 | `skirmish-build` | a skirmish with Unit Count at its least and `--seed 1`: the MCV selected, moved out of its group and deployed (D), then a power plant, a barracks and a light infantry; a `DEPLOY`, 3 `PRODUCE` and 2 `PLACE` events |
+| `skirmish-forcefire` | the same start: the group band-selected (`--drag`), then Ctrl+click (force-fire) on open ground; the game logs no event for either, so the sheet is the check: every unit boxed, a crater where they fired |
 
 "The picture moving" counts distinct checksums the recorder prints every 100
 recorded frames; the hi-res cases run 180 seconds.

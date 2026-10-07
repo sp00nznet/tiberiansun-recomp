@@ -11,6 +11,8 @@ versions follow [SemVer](https://semver.org/).
   fixes the game's random seed (a patch after its GetTickCount at
   `0x004E3A61`), so the start is the same every run; `--select` sets a
   slider (Unit Count).
+- `skirmish-forcefire`: band selection and Ctrl+click force-fire, on the
+  same seeded start.
 - clang-cl (x86) builds, from pcrecomp `main`: the suite passes 21 of 21.
 - CONTRIBUTING.md, and the README's *What the remaster adds*.
 - `--record`'s checksum line prints the game's own frame count, its frame
