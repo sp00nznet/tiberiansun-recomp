@@ -13,10 +13,12 @@ in order; each is done when its check is in the suite or the docs.
    out first.
 3. **The campaigns.** Done to the first mission, all four
    (`campaign-*`). Next: a mission played to its win.
-4. **The rest of the menus.** Done: Options and its five screens
-   (`options-*`), saving in a mission and loading it from the main menu
-   (`load-mission`). Left: World Domination Tour as far as it goes without
-   servers.
+4. **The rest of the menus.** Done: every main-menu entry (`menu-*`),
+   Options and its five screens (`options-*`), saving and loading
+   (`load-mission`). Internet and World Domination Tour end at the game's
+   own "Westwood online support library is missing" message: as far as
+   they go without servers. Serial / Modem is not in the suite (it probes
+   the PC's real modems).
 5. **HD voxels.** Done for units and their shadows (docs/voxels.md).
    Left: voxel projectiles (`0x004472C0`, BulletClass), voxel animations
    and debris, each with a test that puts one on screen.

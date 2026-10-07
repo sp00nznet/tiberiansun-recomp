@@ -42,6 +42,10 @@ What the game logs is how a case knows where it is:
 | `boot` | the choice screen's music starts |
 | `menu-firestorm`, `menu-tibsun` | each game's main menu |
 | `menu-skirmish` | the skirmish setup dialog opens and Cancel leaves it |
+| `menu-lan` | LAN's game list (`0xBB`) opens and Cancel leaves it |
+| `menu-internet`, `menu-wdt` | Internet and World Domination Tour: Westwood Online is not installed, and the game says so (`0xD0`); OK leaves it |
+| `menu-exit` | Exit: the game ends, exit code 0 |
+| `menu-back` | Back: the choice screen and its music again |
 | `options-game`, `-display`, `-sound`, `-keyboard`, `-network` | Options (`0xD5`) and each of its screens (`0xF5`, `0xD8`, `0xD6`, `0xA3`, `0xD7`), opened and left again |
 | `skirmish-start` | a skirmish with the defaults: in game, the picture moving |
 | `skirmish-720p` .. `skirmish-4k` | the same at each resolution (docs/hires.md) |

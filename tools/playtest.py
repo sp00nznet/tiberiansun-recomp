@@ -172,6 +172,19 @@ for name, ctrl, dlg, leave in (('game', 1488, 0xF5, 1), ('display', 1484, 0xD8, 
                                ('keyboard', 1486, 0xA3, 2), ('network', 1485, 0xD7, 2)):
     case('options-' + name, firestorm().click(*MENU_OPTIONS, after=4).press(OPTIONS, ctrl).press(dlg, leave),
          60, dialogs=[OPTIONS, dlg])
+# The rest of the main menu. LAN opens its game list (0xBB), left by
+# Cancel. Internet and World Domination Tour need Westwood Online, which
+# this install lacks: the game says so in a message (0xD0), left by OK.
+# Exit leaves the game (exit code 0); Back returns to the choice screen and
+# its music. (Serial / Modem is left out: it probes the PC's real modems.)
+LAN_GAMES, WOL_MISSING = 0xBB, 0xD0
+MENU_INTERNET, MENU_WDT, MENU_EXIT, MENU_BACK = (318, 245), (318, 337), (86, 372), (40, 10)
+case('menu-lan', firestorm().click(*MENU_LAN, after=4).press(LAN_GAMES, 'Cancel'), 60, dialogs=[LAN_GAMES])
+case('menu-internet', firestorm().click(*MENU_INTERNET, after=4).press(WOL_MISSING, 'OK'), 60,
+     dialogs=[WOL_MISSING])
+case('menu-wdt', firestorm().click(*MENU_WDT, after=4).press(WOL_MISSING, 'OK'), 60, dialogs=[WOL_MISSING])
+case('menu-exit', firestorm().click(*MENU_EXIT, after=4), 60, dialogs=[], exit=0)
+case('menu-back', firestorm().click(*MENU_BACK, after=4), 40, dialogs=[], log={'Theme::PlaySong(0)': 2})   # once at boot, once back
 # A skirmish with the defaults: in game, the picture moving.
 case('skirmish-start', firestorm().click(*MENU_SKIRMISH, after=4).press(SKIRMISH, 'OK'), 90,
      dialogs=[SKIRMISH], ingame=True)

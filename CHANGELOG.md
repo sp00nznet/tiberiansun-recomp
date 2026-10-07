@@ -11,6 +11,9 @@ versions follow [SemVer](https://semver.org/).
   fixes the game's random seed (a patch after its GetTickCount at
   `0x004E3A61`), so the start is the same every run; `--select` sets a
   slider (Unit Count).
+- The rest of the main menu: `menu-lan`, `menu-internet`, `menu-wdt`
+  (Westwood Online missing, as the game reports it), `menu-exit`,
+  `menu-back`.
 - `skirmish-forcefire`: band selection and Ctrl+click force-fire, on the
   same seeded start.
 - clang-cl (x86) builds, from pcrecomp `main`: the suite passes 21 of 21.
