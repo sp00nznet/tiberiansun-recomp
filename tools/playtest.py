@@ -32,13 +32,16 @@ fails on the lift and passes there, the lift is wrong; where both fail, the
 host is.
 """
 import argparse
+import contextlib
 import fnmatch
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
+import threading
 from concurrent.futures import ThreadPoolExecutor
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -46,6 +49,24 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOST = os.environ.get('TS_EXE') or os.path.join(ROOT, 'build', 'ts.exe')
 OUT = os.path.join(ROOT, 'work', 'tests')
 DIALOGS = os.path.join(ROOT, 'work', 'dialogs.json')
+# Off Windows the host is a cross build (build.sh) that runs under Wine:
+# CrossOver's Steam bottle on a Mac, wine on Linux, or TS_WINE, the launcher
+# command.
+WINE = [] if os.name == 'nt' else shlex.split(os.environ.get('TS_WINE') or (
+    '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine --bottle Steam'
+    if sys.platform == 'darwin' else 'wine'))
+# The game folder's wsock32.dll is IPXEmu, the network games' IPX; Wine would
+# load its own, which has none (error 10047 creating the IPX socket).
+if WINE:
+    os.environ.setdefault('WINEDLLOVERRIDES', 'wsock32=n,b')
+# Under Wine two network screens at once share one IPX port (error 10048),
+# so those cases take turns.
+IPX = threading.Lock()
+
+
+def host_path(p):
+    """A path as the host takes it: Wine's Z: is the Mac's (or Linux's) /."""
+    return p if os.name == 'nt' else 'Z:' + os.path.abspath(p).replace('/', '\\')
 
 # The dialog screens (py -3 tools/dialogs.py --show 0xB4 lists one).
 SKIRMISH = 0xB4
@@ -337,7 +358,10 @@ def farm(d, ini=None):
                         text = set_ini(text, sec, k, v)
                 open(t, 'wb').write(text)
             elif not os.path.exists(t):
-                os.link(os.path.join(dirpath, f), t)
+                try:
+                    os.link(os.path.join(dirpath, f), t)
+                except OSError:                      # game/ on another drive (a Steam library): a symlink
+                    os.symlink(os.path.join(dirpath, f), t)
     return d
 
 
@@ -348,12 +372,14 @@ def run(name, args, seconds, expect, every, original=False):
     os.makedirs(d, exist_ok=True)
     game = farm(os.path.join(d, 'game'), expect.get('ini'))
     mp4, log = os.path.join(d, 'run.mp4'), os.path.join(d, 'run.log')
-    cmd = [HOST, '--headless', '--run', '--mute', '--debuglog', '--watchdog', str(seconds),
-           '--record', mp4, '--exe', os.path.join(game, 'Game.exe'), '--game', game] + args
+    cmd = WINE + [HOST, '--headless', '--run', '--mute', '--debuglog', '--watchdog', str(seconds),
+                  '--record', host_path(mp4), '--exe', host_path(os.path.join(game, 'Game.exe')),
+                  '--game', host_path(game)] + args
     cmd += os.environ.get('TS_HOST_ARGS', '').replace('{case}', d).split()  # extra host flags; {case} is the case's folder
     if original:
         cmd.append('--original')
-    with open(log, 'w', errors='replace') as f:
+    lan = WINE and ('network' in name or 'lan' in name)
+    with open(log, 'w', errors='replace') as f, (IPX if lan else contextlib.nullcontext()):
         try:
             code = subprocess.run(cmd, cwd=ROOT, stdout=f, stderr=subprocess.STDOUT,
                                   timeout=seconds + 300).returncode

@@ -22,6 +22,7 @@ import glob
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 
@@ -30,6 +31,21 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOST = os.environ.get('TS_EXE') or os.path.join(ROOT, 'build', 'ts.exe')
 GEN = os.path.join(ROOT, 'src', 'recomp', 'gen')
 BASELINE = os.path.join(ROOT, 'conformance.json')
+# Off Windows the host is a cross build (build.sh) that runs under Wine:
+# CrossOver's Steam bottle on a Mac, wine on Linux, or TS_WINE, the launcher
+# command.
+WINE = [] if os.name == 'nt' else shlex.split(os.environ.get('TS_WINE') or (
+    '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine --bottle Steam'
+    if sys.platform == 'darwin' else 'wine'))
+# The game folder's wsock32.dll is IPXEmu, the network games' IPX; Wine would
+# load its own, which has none (error 10047 creating the IPX socket).
+if WINE:
+    os.environ.setdefault('WINEDLLOVERRIDES', 'wsock32=n,b')
+
+
+def host_path(p):
+    """A path as the host takes it: Wine's Z: is the Mac's (or Linux's) /."""
+    return p if os.name == 'nt' else 'Z:' + os.path.abspath(p).replace('/', '\\')
 
 # (name, what the host prints when it is reached). Order is boot order.
 MILESTONES = [
@@ -52,8 +68,8 @@ def distinct_frames(out):
 
 def boot(seconds):
     try:
-        p = subprocess.run([HOST, '--headless', '--run', '--mute', '--debuglog', '--watchdog', str(seconds),
-                            '--record', os.path.join(ROOT, 'work', 'conformance.mp4')],
+        p = subprocess.run(WINE + [HOST, '--headless', '--run', '--mute', '--debuglog', '--watchdog', str(seconds),
+                                   '--record', host_path(os.path.join(ROOT, 'work', 'conformance.mp4'))],
                            cwd=ROOT, capture_output=True, text=True, errors='replace',
                            timeout=seconds + 60)
         out, code = p.stdout + p.stderr, p.returncode

@@ -34,8 +34,11 @@ for comparison.
 - **HD vehicles**: units, their shadows and voxel debris drawn at twice the
   resolution of the picture, from the game's own voxel models
   (docs/voxels.md).
-- **Runs anywhere Windows does**: the C runtime is linked in, so no Visual
-  C++ redistributable to install; `--mute` for silent runs.
+- **Windows, Linux and macOS**: on Windows the C runtime is linked in, so
+  there is no Visual C++ redistributable to install. On Linux and macOS the
+  same exe is cross-built with clang-cl and played under Wine or CrossOver
+  ([macOS and Linux, under Wine](#macos-and-linux-under-wine)). `--mute` for
+  silent runs.
 
 ## Status: **bring-up, playable.** The whole exe lifts with 0 errors; both games' main menus, skirmishes from 640x400 to 3840x2160, all four campaigns to their first mission with their movies, and building a base, checked by a scripted suite.
 
@@ -82,7 +85,8 @@ You need **your own copy of Tiberian Sun and Firestorm**: the Steam build
 (the folder holding `Game.exe`, `Language.dll` and the `.mix` files).
 Nothing from the game is in this repository and nothing is downloaded for
 you. The lifted C is generated on your machine from your copy and is never
-distributed.
+distributed. On macOS or Linux, see
+[macOS and Linux, under Wine](#macos-and-linux-under-wine).
 
 ### Quick start
 
@@ -150,6 +154,48 @@ some-folder\
 The usual trip-ups: `python` opening the Microsoft Store (that is Windows' alias;
 use `py -3`), and a PATH change that needs a new terminal window.
 
+### macOS and Linux, under Wine
+
+The same `ts.exe`, cross-compiled with clang-cl and played under Wine:
+CrossOver on a Mac, `wine` on Linux. No Visual Studio and no copy of the
+game: `game/` is a link to your install. On a Mac, install the game in a
+CrossOver bottle; on Linux, from Steam (which runs it with Proton) or have the
+folder anywhere. Then:
+
+```
+./setup.sh
+```
+
+On a Mac it checks for and offers to install Homebrew's `llvm`, `lld`,
+`cmake`, `ninja`, `xwin` and `uv`. On Linux it lists what your package manager
+should install (clang-cl, lld, llvm, cmake, ninja, wine and Python 3) and
+offers to download `xwin`'s release binary. Either way it asks before xwin
+downloads the x86 MSVC C runtime and Windows SDK from Microsoft (about 1 GB,
+under Microsoft's licence, into `~/.xwin`); finds `pefile` and `capstone` or
+puts them in a `.venv`; clones pcrecomp beside this folder as `pcrecomp` (or
+uses `../tools`, or `PCRECOMP`); finds the game in your CrossOver bottles or
+Steam libraries; and then catalogs, lifts and builds as `Setup.cmd` does. It
+leaves a `Tiberian Sun (recomp)` launcher here (`.command` on a Mac, `.sh`
+on Linux).
+
+By hand, the steps are *Step by step*'s with `python3` (or `.venv/bin/python`)
+for `py -3` and `./build.sh` for `build.cmd`; `./play.sh` runs the build under
+Wine, with any host flags after it (on a Mac, `CX_BOTTLE` picks the bottle,
+default `Steam`). `tools/playtest.py` and `tools/conformance.py` run the host
+through Wine off Windows (`TS_WINE` for another launcher).
+
+It needs pcrecomp's native32 with Wine support (pcrecomp #55), and the game
+folder's IPXEmu `wsock32.dll` for the LAN screen, which `play.sh` and the
+playtests tell Wine to load (`WINEDLLOVERRIDES=wsock32=n,b`). Under Wine 10.0
+on Debian 13 (x86-64) the playtest suite passes all 29 cases. Not yet under Wine:
+recordings (`--record` starts `ffmpeg` through Wine's `cmd`, which cannot run
+a Linux or Mac program; the frame checksums the tests count still come out),
+and `--original` is untested. Not yet tried on a Mac.
+
+The Mac and Linux build is ported from the one
+[@cpressland](https://github.com/cpressland) wrote for Red Alert 2
+([CONTRIBUTORS.md](CONTRIBUTORS.md)).
+
 ## Usage
 
 ```
@@ -169,7 +215,8 @@ slider). `--seed N` fixes the game's random seed, so a skirmish starts the
 same every run. The script's clock
 starts at the game's `Game Init Completed`.
 
-Environment: `TS_EXE` (another build to test), `TS_HOST_ARGS` (extra host
+Environment: `TS_EXE` (another build to test), `TS_WINE` (the Wine launcher
+off Windows), `TS_HOST_ARGS` (extra host
 flags for every playtest case), `TS_PROBE_ALL=1` (`--probe` reports every
 call, not the first five), `TS_DDTRACE=1` (the first DirectDraw locks and
 blits), `TS_PROFILE=1` (which lifted functions the time goes to, printed
@@ -186,6 +233,11 @@ another `BUILD_DIR`; the suite passes on both). `--original` reaching a
 skirmish also needs pcrecomp #51.
 
 Contributions: [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Contributors
+
+See **[CONTRIBUTORS.md](CONTRIBUTORS.md)** for who did what. Thank you, all of
+you.
 
 ## License
 

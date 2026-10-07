@@ -53,6 +53,10 @@ Desktop.ini
 
 # Made by Setup.cmd
 Tiberian Sun (recomp).cmd
+# Made by setup.sh (macOS, Linux)
+Tiberian Sun (recomp).command
+Tiberian Sun (recomp).sh
+.venv/
 build-trace/
 build-clang/
 

@@ -6,6 +6,18 @@ versions follow [SemVer](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Linux and macOS**, under Wine (CrossOver on a Mac): `ts.exe` cross-built
+  with clang-cl and xwin (`cmake/clang-cl-x86.cmake`, `build.sh`), played with
+  `play.sh`; `setup.sh` finds the tools, the game (CrossOver bottles, Steam
+  libraries) and runs the pipeline. The playtests and conformance run the host
+  through Wine (`TS_WINE`), load the game's IPXEmu `wsock32.dll`, and run the
+  LAN cases one at a time. 29 of 29 under Wine 10.0 on Debian 13. Ported from
+  [@cpressland](https://github.com/cpressland)'s macOS build for Red Alert 2
+  (sp00nznet/redalert2-recomp#1).
+- `run_lift.py` and the host refuse a `Game.exe` that is not the Steam build
+  (PE timestamp `0x393C1B12`): another build lifts, but the patches land in
+  the wrong code and it crashes in game.
+- `CONTRIBUTORS.md`.
 - HD voxel animations and debris (`0x0065E050`, VoxelAnimClass's Draw_It:
   its own finish, `0x00666500`, three more times, and its shadow and body
   blits watched), on with HD voxels; `skirmish-hd-debris` puts a tyre on
