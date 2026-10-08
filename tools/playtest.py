@@ -46,13 +46,17 @@ from concurrent.futures import ThreadPoolExecutor
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # TS_EXE: another build of the host to test (a clang-cl build, an A/B variant).
-HOST = os.environ.get('TS_EXE') or os.path.join(ROOT, 'build', 'ts.exe')
+# On Linux the native host (build-linux.sh) is the default once it is built.
+NATIVE_HOST = os.path.join(ROOT, 'build-linux', 'ts')
+HOST = os.environ.get('TS_EXE') or (NATIVE_HOST if os.name != 'nt' and os.path.exists(NATIVE_HOST)
+                                    else os.path.join(ROOT, 'build', 'ts.exe'))
+NATIVE = os.name != 'nt' and not HOST.lower().endswith('.exe')
 OUT = os.path.join(ROOT, 'work', 'tests')
 DIALOGS = os.path.join(ROOT, 'work', 'dialogs.json')
-# Off Windows the host is a cross build (build.sh) that runs under Wine:
+# Off Windows the .exe is a cross build (build.sh) that runs under Wine:
 # CrossOver's Steam bottle on a Mac, wine on Linux, or TS_WINE, the launcher
-# command.
-WINE = [] if os.name == 'nt' else shlex.split(os.environ.get('TS_WINE') or (
+# command. The native host runs as it is.
+WINE = [] if os.name == 'nt' or NATIVE else shlex.split(os.environ.get('TS_WINE') or (
     '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine --bottle Steam'
     if sys.platform == 'darwin' else 'wine'))
 # The game folder's wsock32.dll is IPXEmu, the network games' IPX; Wine would
@@ -66,7 +70,7 @@ IPX = threading.Lock()
 
 def host_path(p):
     """A path as the host takes it: Wine's Z: is the Mac's (or Linux's) /."""
-    return p if os.name == 'nt' else 'Z:' + os.path.abspath(p).replace('/', '\\')
+    return p if os.name == 'nt' or NATIVE else 'Z:' + os.path.abspath(p).replace('/', '\\')
 
 # The dialog screens (py -3 tools/dialogs.py --show 0xB4 lists one).
 SKIRMISH = 0xB4
@@ -401,7 +405,7 @@ def run(name, args, seconds, expect, every, original=False):
             opened.append(m.group(1))
     distinct = len(set(re.findall(r'\[record\] frame \d+ (?:at \S+ )?checksum ([0-9A-F]{8})', text)))
     ingame = INGAME in text
-    modes = re.findall(r'\[headless\] SetDisplayMode\((\d+)x(\d+)x\d+\)', text)
+    modes = re.findall(r'\[(?:headless|ddraw)\] SetDisplayMode\((\d+)x(\d+)x\d+\)', text)
     defeated = re.search(r'\[game\] MPlayer_Defeated\(\) - Player <human player> has been defeated', text)
     seen = ['dialogs ' + ' '.join(opened)] if opened else []
     if ingame:
