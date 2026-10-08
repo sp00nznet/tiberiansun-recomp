@@ -1,10 +1,13 @@
 #!/bin/bash
-# macOS and Linux setup: the same pipeline as Setup.cmd, cross-compiled here and
-# played under Wine (CrossOver on a Mac, wine on Linux). On a Mac Tiberian Sun
-# has to be installed in a CrossOver bottle; on Linux, from Steam (it runs it
-# with Proton) or anywhere else.
+# macOS and Linux setup: the same pipeline as Setup.cmd. On Linux the game is
+# built as a native program (build-linux.sh: no Wine); on a Mac, or on Linux
+# with --wine, the Windows exe is cross-compiled here and played under Wine
+# (CrossOver on a Mac). On a Mac Tiberian Sun has to be installed in a
+# CrossOver bottle; on Linux, from Steam (it runs it with Proton) or anywhere
+# else.
 #
 #   ./setup.sh                 # catalog, lift and build
+#   ./setup.sh --wine          # on Linux: the Windows exe, under Wine
 #   ./setup.sh --force         # redo every step
 #
 # It links game/ to the install (nothing is copied), builds the function
@@ -14,13 +17,15 @@ set -e
 cd "$(dirname "$0")"
 ROOT=$PWD
 FORCE=0
+NATIVE=1
 for a in "$@"; do
   case "$a" in
     --force) FORCE=1 ;;
-    *) echo "usage: ./setup.sh [--force]" >&2; exit 2 ;;
+    --wine) NATIVE=0 ;;
+    *) echo "usage: ./setup.sh [--force] [--wine]" >&2; exit 2 ;;
   esac
 done
-MAC=0; [ "$(uname)" = Darwin ] && MAC=1
+MAC=0; [ "$(uname)" = Darwin ] && MAC=1 && NATIVE=0
 
 say()  { printf '%s\n' "$*"; }
 step() { printf '\n\033[36m%s\033[0m\n' "$*"; }
@@ -39,6 +44,25 @@ if [ "$MAC" = 1 ]; then
   if [ ${#need[@]} -gt 0 ]; then
     ask "  Install ${need[*]} with Homebrew?" || fail "${need[*]} are required."
     brew install "${need[@]}"
+  fi
+elif [ "$NATIVE" = 1 ]; then
+  # gcc that builds 32-bit, and SDL2 and SDL2_ttf for i386
+  need=()
+  for t in gcc cmake ninja python3 pkg-config; do have "$t" || need+=("$t"); done
+  printf 'int main(void){return 0;}' > /tmp/m32.c
+  gcc -m32 /tmp/m32.c -o /tmp/m32 2>/dev/null || need+=("gcc -m32")
+  PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib32/pkgconfig:/usr/lib/pkgconfig \
+    pkg-config --exists sdl2 SDL2_ttf 2>/dev/null || need+=("SDL2 and SDL2_ttf for i386")
+  if [ ${#need[@]} -gt 0 ]; then
+    say "  Missing: ${need[*]}. From your package manager, for example:"
+    say "    Debian, Ubuntu: sudo dpkg --add-architecture i386 && sudo apt update"
+    say "                    sudo apt install gcc-multilib cmake ninja-build pkg-config python3-venv \\"
+    say "                                     libsdl2-dev:i386 libsdl2-ttf-dev:i386 fonts-liberation"
+    say "    Fedora:         sudo dnf install gcc glibc-devel.i686 cmake ninja-build pkgconf python3 \\"
+    say "                                     SDL2-devel.i686 SDL2_ttf-devel.i686 liberation-sans-fonts"
+    say "    Arch:           sudo pacman -S gcc cmake ninja python lib32-sdl2 lib32-sdl2_ttf ttf-liberation (multilib)"
+    say "  Or ./setup.sh --wine to play the Windows build under Wine instead."
+    fail "install them, then run ./setup.sh again."
   fi
 else
   need=()
@@ -63,7 +87,7 @@ else
 fi
 
 XWIN_DIR=${XWIN_DIR:-$HOME/.xwin}
-if [ ! -d "$XWIN_DIR/crt/lib/x86" ]; then
+if [ "$NATIVE" = 0 ] && [ ! -d "$XWIN_DIR/crt/lib/x86" ]; then
   say "  The x86 MSVC C runtime and Windows SDK are needed to build a Windows exe (about 1 GB)."
   say "  xwin downloads them from Microsoft, under Microsoft's licence:"
   say "  https://go.microsoft.com/fwlink/?LinkId=2086102"
@@ -97,10 +121,16 @@ if [ ! -d "$PCRECOMP/runtime/native32" ]; then
   ask "  Clone the pcrecomp toolkit into $PCRECOMP?" || fail "pcrecomp is required."
   git clone https://github.com/sp00nznet/pcrecomp "$PCRECOMP"
 fi
-# Under Wine, callbacks into lifted code need DEP turned on and a fetch that
-# Wine reports as a read accepted (runtime/native32/native32.c).
-grep -q SetProcessDEPPolicy "$PCRECOMP/runtime/native32/native32.c" ||
-  fail "$PCRECOMP predates native32's Wine support (pcrecomp #55): update it."
+if [ "$NATIVE" = 1 ]; then
+  # the native host is the lifted game on win32hle's DirectDraw, DirectSound and windows
+  [ -f "$PCRECOMP/runtime/win32hle/ddraw.c" ] ||
+    fail "$PCRECOMP predates win32hle's DirectDraw (pcrecomp #62): update it."
+else
+  # Under Wine, callbacks into lifted code need DEP turned on and a fetch that
+  # Wine reports as a read accepted (runtime/native32/native32.c).
+  grep -q SetProcessDEPPolicy "$PCRECOMP/runtime/native32/native32.c" ||
+    fail "$PCRECOMP predates native32's Wine support (pcrecomp #55): update it."
+fi
 export PCRECOMP
 say "  pcrecomp: $PCRECOMP"
 
@@ -166,12 +196,27 @@ if done_already src/recomp/gen/recomp_dispatch.c; then say "  done (skipping)"; 
   "$PY" run_lift.py --all > work/lift.log 2>&1 || fail "see work/lift.log"
   grep "lifted" work/lift.log | tail -1
 fi
-step "Building build/ts.exe (10 to 30 minutes)"
-if done_already build/ts.exe; then say "  done (skipping)"; else
-  [ "$FORCE" = 1 ] && rm -rf build
-  ./build.sh > work/build.log 2>&1 || fail "the build failed: see work/build.log"
+if [ "$NATIVE" = 1 ]; then
+  step "Building build-linux/ts (5 to 20 minutes)"
+  if done_already build-linux/ts; then say "  done (skipping)"; else
+    [ "$FORCE" = 1 ] && rm -rf build-linux
+    ./build-linux.sh > work/build-linux.log 2>&1 || fail "the build failed: see work/build-linux.log"
+  fi
+else
+  step "Building build/ts.exe (10 to 30 minutes)"
+  if done_already build/ts.exe; then say "  done (skipping)"; else
+    [ "$FORCE" = 1 ] && rm -rf build
+    ./build.sh > work/build.log 2>&1 || fail "the build failed: see work/build.log"
+  fi
 fi
-if [ "$MAC" = 1 ]; then
+if [ "$NATIVE" = 1 ]; then
+  launcher="Tiberian Sun (recomp).sh"
+  cat > "$launcher" <<EOF
+#!/bin/sh
+# Plays the recompiled game, natively: scaling F12, fullscreen F11.
+cd "\$(dirname "\$0")" && exec build-linux/ts --run "\$@"
+EOF
+elif [ "$MAC" = 1 ]; then
   launcher="Tiberian Sun (recomp).command"
   cat > "$launcher" <<EOF
 #!/bin/sh
@@ -189,4 +234,8 @@ fi
 chmod +x "$launcher"
 say "  $launcher"
 
-printf '\n\033[32mDone.\033[0m Run "%s" to play; F10 opens the settings.\n' "$launcher"
+if [ "$NATIVE" = 1 ]; then
+  printf '\n\033[32mDone.\033[0m Run "%s" to play; F12 changes the scaling, F11 is fullscreen.\n' "$launcher"
+else
+  printf '\n\033[32mDone.\033[0m Run "%s" to play; F10 opens the settings.\n' "$launcher"
+fi

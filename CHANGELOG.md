@@ -6,6 +6,17 @@ versions follow [SemVer](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Linux, natively** (no Wine): `build-linux/ts`, the same lifted C on
+  pcrecomp's `runtime/win32hle` (pcrecomp #62) — its own kernel32, a window
+  manager with the dialogs and controls the menus use, DirectDraw and
+  DirectSound on SDL2, Winsock with IPXEmu's IPX over UDP, COM, and compound
+  files for saves. `src/linux`: the host (`main.c`), Blowfish.dll's cipher
+  for the MIX headers (`blowfish.c`, its tables read from the game's DLL),
+  and the Windows host's scripted input (`script.c`); `src/runtime/hdvox.c`
+  builds for it. `build-linux.sh` and `cmake/linux-i386.cmake` (gcc -m32,
+  SDL2, SDL2_ttf); `setup.sh` builds it on Linux by default (`--wine` for the
+  Wine build). The window scales as the presenter does (F12, F11, `ts.ini`).
+  `tools/playtest.py` runs it when it is built.
 - **Linux and macOS**, under Wine (CrossOver on a Mac): `ts.exe` cross-built
   with clang-cl and xwin (`cmake/clang-cl-x86.cmake`, `build.sh`), played with
   `play.sh`; `setup.sh` finds the tools, the game (CrossOver bottles, Steam

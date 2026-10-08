@@ -35,8 +35,11 @@ for comparison.
   resolution of the picture, from the game's own voxel models
   (docs/voxels.md).
 - **Windows, Linux and macOS**: on Windows the C runtime is linked in, so
-  there is no Visual C++ redistributable to install. On Linux and macOS the
-  same exe is cross-built with clang-cl and played under Wine or CrossOver
+  there is no Visual C++ redistributable to install. On Linux the game also
+  runs **natively, with no Wine**: the same lifted C on pcrecomp's own
+  implementation of the Windows API, with SDL2 for the window and sound
+  ([Linux, native](#linux-native)). On macOS (and Linux) the exe is
+  cross-built with clang-cl and played under CrossOver or Wine
   ([macOS and Linux, under Wine](#macos-and-linux-under-wine)). `--mute` for
   silent runs.
 
@@ -52,6 +55,7 @@ for comparison.
 | High resolution | 720p, 1080p, 1440p and 4K in game; above 1080 lines the sidebar needed a fix ([hires.md](docs/hires.md)) |
 | Playtest suite (`tools/playtest.py`) | **29 cases**: every main-menu entry (LAN, Internet and World Domination Tour as far as they go without servers, Back, Exit) and the Options screens, save and load, skirmish 640x400 to 4K, the four campaigns, a base built and an infantryman trained in a mission and in a skirmish (the MCV deployed), band selection and force-fire, HD vehicles and voxel debris on; all pass, three at a time ([testing.md](docs/testing.md)) |
 | Conformance (`tools/conformance.py`) | **8/8** boot milestones to the choice screen, lift 0 errors |
+| Native Linux (`build-linux/ts`, pcrecomp `win32hle`) | the same lift as a Linux program, no Wine: boot, menus and dialogs, campaigns, skirmishes to 4K, saves, HD vehicles; the playtest suite in Docker ([Linux, native](#linux-native)) |
 | Presenter (the default display) | the game in its own Direct3D 11 window, from redalert2-recomp: sharp scaling, blurred bars, clicks mapped into the game; checked with the menus ([presenter.md](docs/presenter.md)) |
 | HD vehicles | units, their shadows and voxel debris at 2x, Red Alert 2's four half-pixel passes found again in this renderer ([voxels.md](docs/voxels.md)) |
 
@@ -85,7 +89,7 @@ You need **your own copy of Tiberian Sun and Firestorm**: the Steam build
 (the folder holding `Game.exe`, `Language.dll` and the `.mix` files).
 Nothing from the game is in this repository and nothing is downloaded for
 you. The lifted C is generated on your machine from your copy and is never
-distributed. On macOS or Linux, see
+distributed. On Linux, see [Linux, native](#linux-native); on macOS,
 [macOS and Linux, under Wine](#macos-and-linux-under-wine).
 
 ### Quick start
@@ -153,6 +157,46 @@ some-folder\
 
 The usual trip-ups: `python` opening the Microsoft Store (that is Windows' alias;
 use `py -3`), and a PATH change that needs a new terminal window.
+
+### Linux, native
+
+`build-linux/ts` is a 32-bit Linux program: the same lifted C as the Windows
+build, on pcrecomp's `runtime/win32hle`, which answers every Windows call the
+game makes itself (files, windows and dialogs, DirectDraw and DirectSound on
+SDL2, Winsock, the registry, COM and save-game storage). No Wine and no
+Windows DLLs; the game folder is only data.
+
+On Debian or Ubuntu (`setup.sh` names the Fedora and Arch packages):
+
+```
+sudo dpkg --add-architecture i386 && sudo apt update
+sudo apt install gcc-multilib cmake ninja-build pkg-config python3-pefile python3-capstone \
+                 libsdl2-dev:i386 libsdl2-ttf-dev:i386 fonts-liberation
+./setup.sh
+```
+
+`setup.sh` links `game/` to your install (it looks in your Steam libraries),
+catalogs, lifts and builds, and leaves `Tiberian Sun (recomp).sh`. By hand,
+it is *Step by step* with `python3` for `py -3` and `./build-linux.sh` for
+`build.cmd`, then `build-linux/ts --run`. It needs pcrecomp with win32hle's
+DirectDraw (pcrecomp #62).
+
+The window scales like the Windows presenter: F12 cycles sharp, smooth, CRT,
+nearest and integer scaling, F11 (or Alt+Enter) is fullscreen, and
+`build-linux/ts.ini` remembers them (`--scale` on the command line).
+`--headless`, `--record`, `--mute`, `--hd-voxels`, `--seed` and the scripted
+input are the Windows host's; `tools/playtest.py` runs `build-linux/ts` when
+it is there. LAN games speak IPXEmu's protocol (IPX over UDP), the one the
+Windows build uses through the game folder's `wsock32.dll`: two native
+instances find each other and play a match in lockstep (`--args
+tools/lan/host.args` and `joiner.args`, with different player names); a
+Windows player on the same LAN is not tried yet. Saves are the same compound
+files the Windows build writes.
+
+On Debian 13, headless in Docker, the playtest suite passes 29 of 29 (see the
+CHANGELOG for the run); it also runs in a window on an Xfce desktop with
+PulseAudio. Not on this host: `--original` (it runs the shipping machine code
+on Windows) and the F10 settings menu.
 
 ### macOS and Linux, under Wine
 

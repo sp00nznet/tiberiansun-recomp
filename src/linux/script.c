@@ -233,7 +233,7 @@ static const char *press(int dlg, int ctrl, int32_t *shift) {
         int alive = hle_is_window(d);
         mach_leave();
         if (!alive || g_dialogs_opened != opens || g_watch_cmd != cmd0) how = "click";
-        else if (!t_up && now_ms() - t0 > 120000) how = "click, never taken";
+        else if (!t_up && now_ms() - t0 > 120000) { how = "click, never taken"; mach_enter(); hle_queue_dump(); mach_leave(); }
         else if (t_up && now_ms() - t_up > 2000) {
             mach_enter();
             uint32_t parent = hle_window_parent(c);

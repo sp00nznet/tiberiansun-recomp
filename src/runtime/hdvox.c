@@ -27,8 +27,37 @@
  * Nothing the game sees changes: its buffers, rects and surfaces are as they
  * would have been. Off, every hook returns at once.
  */
+#ifdef _WIN32
 #include <windows.h>
 #include <ddraw.h>
+#else
+/* The native Linux host (src/linux): the few Windows types this file uses,
+ * on POSIX, and the game's surfaces read through win32hle's DirectDraw. */
+#define _GNU_SOURCE
+#include <pthread.h>
+#include <sys/stat.h>
+#include <time.h>
+#include "win32hle.h"
+typedef union { long long QuadPart; } LARGE_INTEGER;
+static void QueryPerformanceCounter(LARGE_INTEGER* t) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    t->QuadPart = (long long)ts.tv_sec * 1000000000LL + ts.tv_nsec;
+}
+static void QueryPerformanceFrequency(LARGE_INTEGER* t) { t->QuadPart = 1000000000LL; }
+typedef pthread_mutex_t CRITICAL_SECTION;
+#define InitializeCriticalSection(c) pthread_mutex_init((c), NULL)
+#define EnterCriticalSection(c) pthread_mutex_lock(c)
+#define LeaveCriticalSection(c) pthread_mutex_unlock(c)
+#define CreateDirectoryA(p, sa) mkdir((p), 0755)
+#define VirtualAlloc(a, n, t, p) calloc(1, (n))
+#define MAX_PATH 4096
+#define _snprintf snprintf
+#define BI_RGB 0
+typedef struct { uint32_t biSize; int32_t biWidth, biHeight; uint16_t biPlanes, biBitCount;
+                 uint32_t biCompression, biSizeImage; int32_t biXPelsPerMeter, biYPelsPerMeter;
+                 uint32_t biClrUsed, biClrImportant; } BITMAPINFOHEADER;
+#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -405,6 +434,19 @@ static void record_image(int x, int y, int w, int h, const uint8_t* idx1, int s1
 static uint32_t g_copy_dest;
 static int g_cx, g_cy, g_cw, g_ch, g_sx, g_sy, g_copy_open;
 
+#ifndef _WIN32
+/* Copy w x h 16-bit pixels at (x, y) of a game DSurface out: its DirectDraw
+ * surface (at +0x1C) is win32hle's, whose pixels are read directly, locked by
+ * the game or not. */
+static int dsurf_read(uint32_t ds, int x, int y, int w, int h, uint16_t* out) {
+    uint8_t* px;
+    int sw, sh, pitch, bpp;
+    if (!hle_dd_surface_pixels(((const uint32_t*)(uintptr_t)ds)[7], &px, &sw, &sh, &pitch, &bpp) || bpp != 16) return 0;
+    if (x < 0 || y < 0 || x + w > sw || y + h > sh) return 0;
+    for (int j = 0; j < h; j++) memcpy(out + j * w, px + (size_t)(y + j) * pitch + (size_t)x * 2, (size_t)w * 2);
+    return 1;
+}
+#else
 static IDirectDrawSurface* dsurf_dd(uint32_t ds) { return (IDirectDrawSurface*)(uintptr_t)((const uint32_t*)(uintptr_t)ds)[7]; }
 
 /* Copy w x h 16-bit pixels at (x, y) of a game DSurface out (dir 0) or back. */
@@ -435,6 +477,7 @@ static int dsurf_read(uint32_t ds, int x, int y, int w, int h, uint16_t* out) {
     dd->lpVtbl->Unlock(dd, NULL);
     return ok;
 }
+#endif
 
 /* 0x00652219 (and two more), before 0x00423530: ecx the battlefield surface; on the stack the
  * destination rect, the staging surface, the (clipped) source rect. */
