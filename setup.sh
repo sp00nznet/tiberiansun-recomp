@@ -51,15 +51,24 @@ elif [ "$NATIVE" = 1 ]; then
   for t in gcc cmake ninja python3 pkg-config; do have "$t" || need+=("$t"); done
   printf 'int main(void){return 0;}' > /tmp/m32.c
   gcc -m32 /tmp/m32.c -o /tmp/m32 2>/dev/null || need+=("gcc -m32")
-  PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib32/pkgconfig:/usr/lib/pkgconfig \
-    pkg-config --exists sdl2 SDL2_ttf 2>/dev/null || need+=("SDL2 and SDL2_ttf for i386")
+  # the 32-bit .pc files: Debian and Ubuntu, Arch (lib32), Fedora (/usr/lib where
+  # /usr/lib64 is a directory of its own; on Arch it is /usr/lib, 64-bit)
+  pcdirs="/usr/lib/i386-linux-gnu/pkgconfig /usr/lib32/pkgconfig"
+  [ -d /usr/lib64 ] && [ ! -L /usr/lib64 ] && pcdirs="$pcdirs /usr/lib/pkgconfig"
+  for pc in sdl2 SDL2_ttf; do
+    # where pkg-config finds it (by name or by a package's Provides, as Fedora's
+    # sdl2-compat provides sdl2), and only a 32-bit directory counts
+    at=$(PKG_CONFIG_PATH=${pcdirs// /:} pkg-config --path "$pc" 2>/dev/null)
+    found=0; for d in $pcdirs; do [ "${at%/*}" = "$d" ] && found=1; done
+    [ $found = 1 ] || { need+=("SDL2 and SDL2_ttf for i386"); break; }
+  done
   if [ ${#need[@]} -gt 0 ]; then
     say "  Missing: ${need[*]}. From your package manager, for example:"
     say "    Debian, Ubuntu: sudo dpkg --add-architecture i386 && sudo apt update"
     say "                    sudo apt install gcc-multilib cmake ninja-build pkg-config python3-venv \\"
     say "                                     libsdl2-dev:i386 libsdl2-ttf-dev:i386 fonts-liberation"
-    say "    Fedora:         sudo dnf install gcc glibc-devel.i686 cmake ninja-build pkgconf python3 \\"
-    say "                                     SDL2-devel.i686 SDL2_ttf-devel.i686 liberation-sans-fonts"
+    say "    Fedora:         sudo dnf install gcc glibc-devel.i686 libgcc.i686 libatomic.i686 cmake ninja-build pkgconf python3 \\"
+    say "                                     sdl2-compat-devel.i686 SDL2_ttf-devel.i686 liberation-sans-fonts"
     say "    Arch:           sudo pacman -S gcc cmake ninja python lib32-sdl2 lib32-sdl2_ttf ttf-liberation (multilib)"
     say "  Or ./setup.sh --wine to play the Windows build under Wine instead."
     fail "install them, then run ./setup.sh again."
@@ -121,10 +130,23 @@ if [ ! -d "$PCRECOMP/runtime/native32" ]; then
   ask "  Clone the pcrecomp toolkit into $PCRECOMP?" || fail "pcrecomp is required."
   git clone https://github.com/sp00nznet/pcrecomp "$PCRECOMP"
 fi
+# The native host is the lifted game on win32hle's DirectDraw, DirectSound and
+# windows. Until pcrecomp #62 is merged its main branch does not have them: a
+# clone of it is offered the pull request's branch.
+WIN32HLE_BRANCH=feat/win32hle-ts
 if [ "$NATIVE" = 1 ]; then
-  # the native host is the lifted game on win32hle's DirectDraw, DirectSound and windows
+  if [ ! -f "$PCRECOMP/runtime/win32hle/ddraw.c" ] && [ -d "$PCRECOMP/.git" ] &&
+     git -C "$PCRECOMP" ls-remote --exit-code origin "$WIN32HLE_BRANCH" >/dev/null 2>&1; then
+    say "  The native build needs win32hle's DirectDraw, which is on pcrecomp's"
+    say "  $WIN32HLE_BRANCH branch (pull request #62) and not yet on its main branch."
+    if ask "  Check that branch out in $PCRECOMP?"; then
+      git -C "$PCRECOMP" fetch -q origin "$WIN32HLE_BRANCH" &&
+        git -C "$PCRECOMP" checkout -q FETCH_HEAD ||
+        fail "could not check out $WIN32HLE_BRANCH in $PCRECOMP (local changes?)."
+    fi
+  fi
   [ -f "$PCRECOMP/runtime/win32hle/ddraw.c" ] ||
-    fail "$PCRECOMP predates win32hle's DirectDraw (pcrecomp #62): update it."
+    fail "$PCRECOMP predates win32hle's DirectDraw (pcrecomp #62): update it, or ./setup.sh --wine."
 else
   # Under Wine, callbacks into lifted code need DEP turned on and a fetch that
   # Wine reports as a read accepted (runtime/native32/native32.c).

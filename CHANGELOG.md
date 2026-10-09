@@ -6,6 +6,17 @@ versions follow [SemVer](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Mods**: a mod is a folder in `mods/`, laid over the game's folder without
+  changing it (its files read first, what the game writes going into it, its
+  maps and `expand*.mix` listed with the game's). `--mod NAME`; the settings
+  menu (F10) on Windows and F9 in the menus on Linux switch mods by
+  restarting the game; the choice is remembered (`src/runtime/mods.c`,
+  `src/linux/mods.c`, `mods/README.md`).
+- **Readable lifted C**: `run_lift.py` names functions from what the binary
+  says (pcrecomp's `tools/lift/name_lift.py`: RTTI classes and vtable slots,
+  constructors and destructors, debug messages) and gives each a header (its
+  strings, Windows calls, `this` class, callers); 5,602 of 18,559 are named.
+  An older pcrecomp leaves the address names.
 - **Linux, natively** (no Wine): `build-linux/ts`, the same lifted C on
   pcrecomp's `runtime/win32hle` (pcrecomp #62) — its own kernel32, a window
   manager with the dialogs and controls the menus use, DirectDraw and
@@ -72,6 +83,16 @@ versions follow [SemVer](https://semver.org/).
   report every call.
 
 ### Fixed
+- The menus had no cursor, on Windows and on Linux: they are Win32 dialogs
+  that use the Windows cursor the game sets (the arrow, and the no-entry
+  sign), and the presenter hid it everywhere. It now shows the game's cursor
+  while the mouse is not captured (`WWMouseClass`'s +0x14 byte) and leaves the
+  battle to the game's own, as Red Alert 2's presenter does.
+- `setup.sh` on Linux stopped at "predates win32hle's DirectDraw" with a fresh
+  pcrecomp: #62 is not merged yet, and it now offers the pull request's
+  branch. Fedora's packages are named right (`sdl2-compat-devel`, `libgcc` and
+  `libatomic` for i686), its 32-bit libraries are found, and the check counts
+  only 32-bit ones.
 - HD voxel shadows (and anything blitted straight onto the battlefield)
   were read 16 pixels too high: `0x0047CC10`'s point is in its window,
   the tactical view below the top bar (its fourth argument).

@@ -266,6 +266,33 @@ call, not the first five), `TS_DDTRACE=1` (the first DirectDraw locks and
 blits), `TS_PROFILE=1` (which lifted functions the time goes to, printed
 when the watchdog ends the run).
 
+### Mods
+
+A mod is a folder of the game's own kind of files (rules, art, string tables,
+MIX files, maps) in `mods/<name>/`: see [mods/README.md](mods/README.md). The game's
+folder is never changed. The mod's folder is laid over it, so the game reads
+the mod's file where it has one and its own where it does not, and what it
+writes while a mod is on (settings, saves) goes into the mod's folder.
+`--mod NAME` plays one (`--mod none`, none); on Windows the settings menu
+(F10) lists them, on Linux F9 Tried: a rules and art mod (Mistweaver's). steps through them, and either restarts the
+game with the one chosen and remembers it. Mods built on DLLs that patch
+`Game.exe`'s machine code (Ares, Phobos and the like) cannot work on a recompiled
+game. in the menus
+
+### Reading the lifted C
+
+The lift (`src/recomp/gen`, made on your machine, never committed) names what
+the binary itself names (pcrecomp's `tools/lift/name_lift.py`): virtual
+methods by their class and vtable slot from RTTI (`UnitClass__virtual_42`,
+COM's by name: `OverlayClass__Load`), constructors, destructors and
+`operator_delete` by their shape, and functions that print their own name in
+a debug message by it. Each function has a header saying how it was named,
+its `this` class, the strings it uses, the Windows calls it makes and how many
+places call it, and a constant that is a string's or a vtable's address has a
+comment. A function with no such evidence keeps its address name
+(`sub_` and its address) and still gets the header. The address is in each header and
+in its `RECOMP_ENTER`, so a crash report's address finds the function.
+
 ## Building from source
 
 Steps 5 and 6 above. `PCRECOMP` (environment, for `run_lift.py`) and

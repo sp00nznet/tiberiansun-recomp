@@ -34,6 +34,7 @@ extern const uint32_t ts_entry_va;    /* recomp_dispatch.c */
 
 static int g_debuglog, g_headless, g_fullscreen = -1;   /* -1: as ts.ini says */
 static const char *g_scale;
+static const char *g_mod;              /* --mod NAME */
 static unsigned g_watchdog_s;
 
 /* ---- what the lift calls into ---------------------------------------------
@@ -68,6 +69,7 @@ void ts_hook_004082D0(void) {
 /* HD voxels (src/runtime/hdvox.c): the lift's patches call it, and the
  * presenter shows its 2x picture. */
 #include "hdvox.h"
+#include "mods.h"
 static int compose_hd(const uint8_t *px16, int pitch, int w, int h, uint32_t *out) {
     if (!ts_vox_hd_on) return 0;
     hdvox_compose(px16, pitch, w, h, out);
@@ -255,6 +257,16 @@ static void *recorder(void *unused) {
     }
 }
 
+/* The cursor, as on Windows (src/runtime/host.c, host_menu_cursor): the menus
+ * are Win32 dialogs and use the Windows cursor the game sets; in a battle the
+ * mouse is captured (WWMouseClass's +0x14 byte) and the game draws its own. */
+#define TS_MOUSE_VA 0x0074C8F0u   /* the mouse object (WWMouseClass), stored after its construction */
+static int menus_use_windows_cursor(void) {
+    uint32_t mouse = MEM32(TS_MOUSE_VA);
+    int game_draws_cursor = mouse && MEM8(mouse + 0x14);
+    return !game_draws_cursor;
+}
+
 /* Without a recording, the same checksum lines at the same rate, from the
  * pump; and --dump-frames writes those frames as BMPs. */
 static void ts_pump(void) {
@@ -274,7 +286,8 @@ static void ts_pump(void) {
 }
 
 /* The presenter's settings, in ts.ini beside this program, as the Windows
- * build keeps them beside ts.exe: [present] scale, bars, fullscreen. */
+ * build keeps them beside ts.exe: [present] scale, bars, fullscreen; and
+ * [mods] active, the mod last played (mods.c). */
 static char g_ini[PATH_MAX];
 static void ini_path(void) {
     ssize_t n = readlink("/proc/self/exe", g_ini, sizeof g_ini - 8);
@@ -283,28 +296,35 @@ static void ini_path(void) {
     char *slash = strrchr(g_ini, '/');
     strcpy(slash ? slash + 1 : g_ini, "ts.ini");
 }
+static char g_saved_scale[32] = "sharp", g_saved_mod[128];
+static int g_saved_bars = 1, g_saved_full;
 static void settings_load(char *scale, size_t n, int *bars, int *full) {
     FILE *f = g_ini[0] ? fopen(g_ini, "r") : NULL;
     char line[256];
     int in = 0;
     while (f && fgets(line, sizeof line, f)) {
         line[strcspn(line, "\r\n")] = 0;
-        if (line[0] == '[') { in = !strcasecmp(line, "[present]"); continue; }
+        if (line[0] == '[') { in = !strcasecmp(line, "[present]") ? 1 : !strcasecmp(line, "[mods]") ? 2 : 0; continue; }
         char *eq = strchr(line, '=');
         if (!in || !eq) continue;
         *eq = 0;
-        if (!strcasecmp(line, "scale")) snprintf(scale, n, "%s", eq + 1);
+        if (in == 2) { if (!strcasecmp(line, "active")) snprintf(g_saved_mod, sizeof g_saved_mod, "%s", eq + 1); }
+        else if (!strcasecmp(line, "scale")) snprintf(scale, n, "%s", eq + 1);
         else if (!strcasecmp(line, "bars")) *bars = strcasecmp(eq + 1, "black") != 0;
         else if (!strcasecmp(line, "fullscreen")) *full = atoi(eq + 1);
     }
     if (f) fclose(f);
 }
 static void settings_save(const char *scale, int bars, int full) {
+    snprintf(g_saved_scale, sizeof g_saved_scale, "%s", scale);
+    g_saved_bars = bars, g_saved_full = full;
     FILE *f = g_ini[0] ? fopen(g_ini, "w") : NULL;
     if (!f) return;
     fprintf(f, "[present]\nscale=%s\nbars=%s\nfullscreen=%d\n", scale, bars ? "blur" : "black", full);
+    fprintf(f, "[mods]\nactive=%s\n", mods_active());
     fclose(f);
 }
+static void settings_save_mod(void) { settings_save(g_saved_scale, g_saved_bars, g_saved_full); }
 
 static uint32_t exe_stamp(const char *path) {
     uint8_t head[4096] = { 0 };
@@ -355,6 +375,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--mute")) hle_dsound_set_master(0.0f);
         else if (!strcmp(argv[i], "--seed") && i + 1 < argc) ts_seed = (uint32_t)strtoul(argv[++i], NULL, 0);
         else if (!strcmp(argv[i], "--game") && i + 1 < argc) game = argv[++i];
+        else if (!strcmp(argv[i], "--mod") && i + 1 < argc) g_mod = argv[++i];
         else if (!strcmp(argv[i], "--watchdog") && i + 1 < argc) g_watchdog_s = (unsigned)strtoul(argv[++i], NULL, 0);
         else if (!strcmp(argv[i], "--trace")) win32hle_trace = 1;
         else if (!strcmp(argv[i], "--record") && i + 1 < argc) {
@@ -380,7 +401,7 @@ int main(int argc, char **argv) {
             g_dump_dir = dir;                /* the run chdirs into the game folder */
         }
         else {
-            printf("usage: ts [--run] [--headless | --fullscreen] [--scale sharp|smooth|crt|nearest|integer] [--game DIR] [--debuglog] [--mute] [--seed N] [--watchdog S] [--trace] [--dump-frames DIR] [--record out.mp4] [--frames N] [--hd-voxels] [--hd-voxels-dump DIR]\n"
+            printf("usage: ts [--run] [--headless | --fullscreen] [--scale sharp|smooth|crt|nearest|integer] [--game DIR] [--mod NAME|none] [--debuglog] [--mute] [--seed N] [--watchdog S] [--trace] [--dump-frames DIR] [--record out.mp4] [--frames N] [--hd-voxels] [--hd-voxels-dump DIR]\n"
                    "           [--press DLG:CTRL@s] [--select DLG:CTRL=N@s] [--waitlog TEXT@s] [--move|--click x,y@s]\n"
                    "           [--key [c][s][a]+vk@s] [--wait VA@s] [--drag x1,y1,x2,y2@s]\n");
             return !strcmp(argv[i], "--help") || !strcmp(argv[i], "-h") ? 0 : 1;
@@ -440,12 +461,16 @@ int main(int argc, char **argv) {
         int bars = 1, full = 0;
         ini_path();
         settings_load(scale, sizeof scale, &bars, &full);
+        snprintf(g_saved_scale, sizeof g_saved_scale, "%s", scale);
+        g_saved_bars = bars, g_saved_full = full;
         if (g_scale) snprintf(scale, sizeof scale, "%s", g_scale);
         if (g_fullscreen >= 0) full = g_fullscreen;
         if (!hle_screen_scale(scale)) fprintf(stderr, "[host] no scaling \"%s\": sharp, smooth, crt, nearest or integer\n", scale);
         hle_screen_bars(bars);
         hle_screen_settings_hook = settings_save;
+        hle_screen_cursor_hook = menus_use_windows_cursor;
         if (hle_screen_open("Tiberian Sun", full, g_headless) != 0) return 1;
+        mods_start(game_full, g_mod, g_saved_mod, argc, argv, settings_save_mod, menus_use_windows_cursor);
     }
     hle_set_pump_hook(ts_pump);
     hle_screen_compose_hook = compose_hd;

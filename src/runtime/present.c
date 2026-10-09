@@ -29,6 +29,7 @@
 #include "input.h"
 #include "present.h"
 #include "hdvox.h"
+#include "mods.h"
 
 int host_frame(uint32_t* out, int maxw, int maxh, int* w, int* h);   /* host.c */
 int host_frame_hd(uint32_t* out, int maxw, int maxh, int* w, int* h);   /* host.c: 2x, HD voxels */
@@ -425,11 +426,15 @@ static void set_game_resolution(int w, int h) {
     fprintf(stderr, "[present] game resolution %dx%d (the next game opens at it)\n", w, h);
 }
 
-enum { ID_SCALE = 100, ID_BARS = 200, ID_FULL = 300, ID_RES = 400, ID_HDVOX = 500 };
+enum { ID_SCALE = 100, ID_BARS = 200, ID_FULL = 300, ID_RES = 400, ID_HDVOX = 500, ID_MOD = 600 };
+#define MAX_MENU_MODS 64
 
 static void settings_menu(HWND hw) {             /* at the mouse */
     POINT at;
     HMENU m = CreatePopupMenu(), sc = CreatePopupMenu(), bars = CreatePopupMenu(), res = CreatePopupMenu();
+    HMENU mods = CreatePopupMenu();
+    static char mod_names[MAX_MENU_MODS][128];
+    int nmods = mods_list(mod_names, MAX_MENU_MODS);
     static const char* const scale_label[NMODES] = { "Sharp (default)", "Smooth", "CRT", "Nearest", "Integer" };
     char lbl[32];
     for (int i = 0; i < NMODES; i++)
@@ -447,6 +452,12 @@ static void settings_menu(HWND hw) {             /* at the mouse */
     AppendMenuA(m, MF_STRING | (ts_vox_hd_on ? MF_CHECKED : 0), ID_HDVOX, "HD vehicles (voxels at 2x)");
     AppendMenuA(m, MF_SEPARATOR, 0, NULL);
     AppendMenuA(m, MF_POPUP, (UINT_PTR)res, "Game resolution (next game)");
+    /* the mods in the mods folder: choosing one restarts the game with it (mods.c) */
+    AppendMenuA(mods, MF_STRING | (!mods_active()[0] ? MF_CHECKED : 0), ID_MOD, "None (the game as it shipped)");
+    for (int i = 0; i < nmods; i++)
+        AppendMenuA(mods, MF_STRING | (!_stricmp(mods_active(), mod_names[i]) ? MF_CHECKED : 0), ID_MOD + 1 + i, mod_names[i]);
+    if (!nmods) AppendMenuA(mods, MF_STRING | MF_GRAYED, 0, "(put mods in the mods folder: mods\\README.md)");
+    AppendMenuA(m, MF_POPUP, (UINT_PTR)mods, "Mod (restarts the game)");
     GetCursorPos(&at);
     int cmd = TrackPopupMenu(m, TPM_RETURNCMD | TPM_RIGHTBUTTON, at.x, at.y, 0, hw, NULL);
     DestroyMenu(m);                                           /* and its submenus */
@@ -455,6 +466,16 @@ static void settings_menu(HWND hw) {             /* at the mouse */
     else if (cmd == ID_FULL) set_fullscreen(hw, !g_fullscreen);
     else if (cmd == ID_HDVOX) ts_vox_hd_on = !ts_vox_hd_on;      /* takes effect next frame */
     else if (cmd >= ID_RES && cmd < ID_RES + NRES) set_game_resolution(k_res[cmd - ID_RES][0], k_res[cmd - ID_RES][1]);
+    else if (cmd >= ID_MOD && cmd <= ID_MOD + nmods) {
+        const char* name = cmd == ID_MOD ? "" : mod_names[cmd - ID_MOD - 1];
+        char ask[256];
+        _snprintf(ask, sizeof ask - 1, "Restart with %s? A game in progress is lost.", name[0] ? name : "no mod"), ask[sizeof ask - 1] = 0;
+        if (_stricmp(name, mods_active()) && MessageBoxA(hw, ask, "Tiberian Sun (recomp)", MB_YESNO | MB_ICONQUESTION) == IDYES) {
+            settings_save(hw);
+            mods_restart_with(name);
+        }
+        return;
+    }
     if (cmd) settings_save(hw);
 }
 
@@ -463,6 +484,24 @@ static DWORD WINAPI quit_soon(LPVOID unused) {
     Sleep(5000);                 /* the game had its chance to save its settings and go */
     ExitProcess(0);
     return 0;
+}
+
+HCURSOR host_menu_cursor(void);   /* host.c: the game's cursor, NULL while it draws its own */
+
+/* Who shows the cursor changes when the game captures or releases the mouse
+ * (a battle starts or ends), without the mouse moving: WM_SETCURSOR alone
+ * would leave the menus' arrow over the battlefield, beside the game's own,
+ * until the player moved. */
+static void update_cursor(HWND hw) {
+    static HCURSOR was = (HCURSOR)-1;
+    HCURSOR c = host_menu_cursor();
+    POINT p;
+    if (c == was) return;
+    fprintf(stderr, "[present] cursor: %s\n", c ? "the game's Windows cursor (menus)" : "drawn by the game");
+    was = c;
+    if (GetCursorPos(&p) && WindowFromPoint(p) == hw &&
+        SendMessageA(hw, WM_NCHITTEST, 0, MAKELPARAM(p.x, p.y)) == HTCLIENT)
+        SetCursor(c);
 }
 
 static LRESULT CALLBACK wndproc(HWND hw, UINT m, WPARAM w, LPARAM l) {
@@ -490,7 +529,9 @@ static LRESULT CALLBACK wndproc(HWND hw, UINT m, WPARAM w, LPARAM l) {
         forward_key(m, w, l);
         return 0;
     case WM_SETCURSOR:
-        if (LOWORD(l) == HTCLIENT) { SetCursor(NULL); return TRUE; }   /* the game draws its own */
+        /* In a battle the game draws its own; in the menus, the Windows
+         * cursor it set (update_cursor). */
+        if (LOWORD(l) == HTCLIENT) { SetCursor(host_menu_cursor()); return TRUE; }
         break;
     case WM_SYSKEYDOWN:
         if (w == VK_RETURN) { set_fullscreen(hw, !g_fullscreen); settings_save(hw); return 0; }
@@ -563,6 +604,11 @@ static DWORD WINAPI present_thread(LPVOID arg) {
     }
     HWND hw = CreateWindowExA(0, "TSPresenter", "Tiberian Sun (recomp)", WS_OVERLAPPEDWINDOW,
                               wx, wy, ww, wh, NULL, NULL, wc.hInstance, NULL);
+    if (hw && mods_active()[0]) {                 /* the mod playing, in the title */
+        char title[256];
+        _snprintf(title, sizeof title - 1, "Tiberian Sun (recomp) - %s", mods_active()), title[sizeof title - 1] = 0;
+        SetWindowTextA(hw, title);
+    }
     if (!hw || !d3d_init(hw)) {
         fprintf(stderr, "[present] could not start; run with --classic for the original display\n");
         ExitProcess(5);
@@ -580,6 +626,7 @@ static DWORD WINAPI present_thread(LPVOID arg) {
             TranslateMessage(&msg);
             DispatchMessageA(&msg);
         }
+        update_cursor(hw);
         if (host_frame_hd(frame, 4096, 2160, &gw, &gh)) {     /* the picture at 2x */
             InterlockedExchange(&g_gw, gw);
             InterlockedExchange(&g_gh, gh);

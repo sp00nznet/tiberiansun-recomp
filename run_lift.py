@@ -441,6 +441,21 @@ def main():
         f.write('};\nconst uint32_t recomp_dispatch_count = %d;\n'
                 'const uint32_t ts_entry_va = 0x%08Xu;\n' % (len(entries), entry))
 
+    # Readable names, and a header on every function saying what it is, from
+    # what the binary itself says: RTTI's vtables, debug messages, vtable
+    # stores (pcrecomp's tools/lift/name_lift.py). An older toolkit without it
+    # leaves the address names; nothing else depends on them.
+    try:
+        import name_lift
+    except ImportError:
+        print('[*] names: no tools/lift/name_lift.py in this pcrecomp; functions keep their address names')
+    else:
+        rtti_path = os.path.join(os.path.dirname(SEEDS), 'rtti.json')
+        rtti = json.load(open(rtti_path)) if os.path.exists(rtti_path) else {}
+        named = name_lift.name_lift(args.out, name_lift.Image(args.exe), rtti, {})
+        print('[*] names: %d of %d functions named from the binary\'s own evidence'
+              % (sum(1 for f in named.values() if f.name), len(named)))
+
     lines = sum(sum(1 for _ in open(os.path.join(args.out, fn), encoding='utf-8', errors='replace'))
                 for fn in os.listdir(args.out))
     stats = {'lifted': len(chosen), 'stubs': len(stubs), 'errors': errors,

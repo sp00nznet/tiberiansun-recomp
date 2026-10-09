@@ -63,3 +63,6 @@ build-linux/
 
 # LAN game frames (tools/lan/*.args)
 lan-frames/
+
+# Mods you add (mods/README.md): third-party content, never committed
+mods/*/

@@ -32,7 +32,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(HLE ${PCRECOMP}/runtime/win32hle)
   file(GLOB HLE_SOURCES CONFIGURE_DEPENDS "${HLE}/*.c")
   list(FILTER HLE_SOURCES EXCLUDE REGEX "_selftest\.c$")
-  add_executable(ts src/linux/main.c src/linux/blowfish.c src/linux/script.c src/runtime/hdvox.c ${HLE_SOURCES} ${GEN_SOURCES})
+  add_executable(ts src/linux/main.c src/linux/blowfish.c src/linux/script.c src/linux/mods.c src/runtime/hdvox.c ${HLE_SOURCES} ${GEN_SOURCES})
   target_include_directories(ts PRIVATE src/linux src/runtime src/recomp/gen ${HLE} ${PCRECOMP}/runtime/recomp32)
   target_compile_definitions(ts PRIVATE RECOMP_RETADDR=0u RECOMP_FLAT_MEMORY RECOMP_LOCAL_REGS)
   set(GEN_OPT "-O2" CACHE STRING "optimisation for the generated C")
@@ -49,6 +49,7 @@ endif()
 add_executable(ts
   src/runtime/host.c
   src/runtime/input.c
+  src/runtime/mods.c
   src/runtime/oracle.c
   src/runtime/present.c
   src/runtime/hdvox.c
@@ -70,8 +71,8 @@ target_link_options(ts PRIVATE /BASE:0x60000000 /FIXED:NO /DYNAMICBASE:NO
                                /MANIFESTUAC:NO)
 set(GEN_OPT "/O2" CACHE STRING "optimisation for the generated C")
 set_source_files_properties(${GEN_SOURCES} PROPERTIES COMPILE_OPTIONS "/w;${GEN_OPT}")
-set_source_files_properties(src/runtime/host.c src/runtime/input.c src/runtime/oracle.c src/runtime/present.c src/runtime/hdvox.c PROPERTIES COMPILE_OPTIONS "/W3")
-target_link_libraries(ts PRIVATE user32 gdi32 kernel32 ole32 uuid ddraw dxguid winmm d3d11 dxgi)
+set_source_files_properties(src/runtime/host.c src/runtime/input.c src/runtime/mods.c src/runtime/oracle.c src/runtime/present.c src/runtime/hdvox.c PROPERTIES COMPILE_OPTIONS "/W3")
+target_link_libraries(ts PRIVATE user32 gdi32 kernel32 ole32 uuid ddraw dxguid winmm d3d11 dxgi shell32)
 
 option(TS_TRACE "record a ring buffer of lifted function entries" OFF)
 if(TS_TRACE)
