@@ -21,7 +21,7 @@ endif()
 set(PCRECOMP "${CMAKE_SOURCE_DIR}/../tools" CACHE PATH "pcrecomp checkout")
 file(GLOB GEN_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/recomp/gen/*.c")
 if(NOT GEN_SOURCES)
-  message(FATAL_ERROR "src/recomp/gen is empty -- run `py -3 run_lift.py` first")
+  message(FATAL_ERROR "src/recomp/gen is empty -- run ./setup.sh (Setup.cmd on Windows) first: it lifts the game")
 endif()
 
 # ---- native Linux: the lifted C on runtime/win32hle (cmake/linux-i386.cmake)
