@@ -562,7 +562,11 @@ static LRESULT CALLBACK wndproc(HWND hw, UINT m, WPARAM w, LPARAM l) {
         }
         forward_key(m, w, l);
         return 0;
-    case WM_KEYUP: case WM_SYSKEYUP: case WM_CHAR: case WM_SYSCHAR:
+    case WM_CHAR: case WM_SYSCHAR:
+        /* The game's own loops TranslateMessage the key-down forwarded
+         * above into its character: forwarded too, every letter came twice. */
+        return 0;
+    case WM_KEYUP: case WM_SYSKEYUP:
         if (w == VK_F10 || w == VK_F11 || w == VK_F12) return 0;
         forward_key(m, w, l);
         return 0;
@@ -641,7 +645,10 @@ static DWORD WINAPI present_thread(LPVOID arg) {
             DispatchMessageA(&msg);
         }
         update_cursor(hw);
-        if (host_frame_hd(frame, 4096, 2160, &gw, &gh)) {     /* the picture at 2x */
+        int hd = host_frame_hd(frame, 4096, 2160, &gw, &gh);
+        if (hd < 0) {                              /* locked: the last picture stays */
+            Sleep(1);
+        } else if (hd) {                           /* the picture at 2x */
             InterlockedExchange(&g_gw, gw);
             InterlockedExchange(&g_gh, gh);
             draw(frame, 2 * gw, 2 * gh);
