@@ -83,6 +83,10 @@ versions follow [SemVer](https://semver.org/).
   report every call.
 
 ### Fixed
+- Visual Studio 2026 (MSVC 19.50 and later) miscompiles the lifted C: its
+  optimiser drops the sign test of a 16-bit value moved to the top of a
+  register, which crashed Red Alert 2's skirmishes. The lifted C is built
+  with its older optimiser there (`/d2SSAOptimizer-`).
 - The menus had no cursor, on Windows and on Linux: they are Win32 dialogs
   that use the Windows cursor the game sets (the arrow, and the no-entry
   sign), and the presenter hid it everywhere. It now shows the game's cursor
