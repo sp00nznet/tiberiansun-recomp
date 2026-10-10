@@ -74,7 +74,8 @@ typedef struct { uint32_t biSize; int32_t biWidth, biHeight; uint16_t biPlanes, 
 #define STAGE_DIRTY ((const int32_t*)(uintptr_t)0x0080F8E0u)    /* the parts' union: x, y, w, h */
 #define FRAME_SURF (*(const uint32_t*)(uintptr_t)0x0074C5D8u)   /* the primary's DSurface */
 
-int ts_vox_hd_on;
+int ts_vox_hd_on, ts_vox_hd_show = 1;
+#define HD_LIVE (ts_vox_hd_on && ts_vox_hd_show)
 int16_t ts_vox_dx, ts_vox_dy;          /* read by the rasterizer patch, 8.8 */
 
 static int g_busy;
@@ -156,14 +157,14 @@ int ts_vox_hd_begin(uint32_t rect) {
  * through pointers: save is the caller's region holding them; the memo's
  * rect is the buffer's bounding box (VOX_BBOX), which every finish sets. */
 int ts_vox_hd_begin_at(uint32_t save, uint32_t len) {
-    if (!ts_vox_hd_on) return 0;
+    if (!HD_LIVE) return 0;
     g_mx = (int)VOX_BBOX[0], g_my = (int)VOX_BBOX[1], g_mw = (int)VOX_BBOX[2] + 1, g_mh = (int)VOX_BBOX[3] + 1;
     int ok = g_mx >= 0 && g_my >= 0 && g_mw > 0 && g_mh > 0 && g_mx + g_mw <= 256 && g_my + g_mh <= 256;
     return hd_begin(save, len, ok);
 }
 
 static int hd_begin(uint32_t save, uint32_t len, int memo_ok) {
-    if (!ts_vox_hd_on || g_busy || len > sizeof g_rect) return 0;
+    if (!HD_LIVE || g_busy || len > sizeof g_rect) return 0;
     g_key = 0;
     if (memo_ok) {
         g_key = memo_key();
@@ -268,7 +269,7 @@ void ts_vox_hd_blit(uint32_t dest, uint32_t convert, uint32_t esp) {
     (void)convert;
     g_stamp_open = 0;
     g_direct_open = 0;
-    if (!ts_vox_hd_on) return;
+    if (!HD_LIVE) return;
     if (dest != STAGING) {                        /* aircraft: straight onto the battlefield */
         direct_blit(dest, a);
         return;
@@ -487,7 +488,7 @@ void ts_vox_unit_copy(uint32_t dest, uint32_t esp) {
     const int32_t* sr = (const int32_t*)(uintptr_t)a[2];
     const uint32_t* ds = (const uint32_t*)(uintptr_t)dest;
     g_copy_open = 0;
-    if (!ts_vox_hd_on || a[1] != STAGING) { g_nstamps = 0; return; }
+    if (!HD_LIVE || a[1] != STAGING) { g_nstamps = 0; return; }
     /* The source is the staging's dirty rect, the parts' union (0x0080F8E0);
      * the stack's third rect is only the staging's bounds. Clip the
      * destination to the surface, the source with it. */
@@ -558,7 +559,7 @@ void ts_vox_shadow_blit(uint32_t dest, uint32_t esp) {
     const uint32_t* a = (const uint32_t*)(uintptr_t)esp;
     const uint32_t* ds = (const uint32_t*)(uintptr_t)dest;
     g_sh_open = 0;
-    if (!ts_vox_hd_on || a[0] != VOX_SURF) return;
+    if (!HD_LIVE || a[0] != VOX_SURF) return;
     if (ds[4] != 2) { g_sh_skipped++; return; }  /* not the 16-bit battlefield */
     int x, y, w, h, sx, sy;
     if (!place(ds, a, &x, &y, &w, &h, &sx, &sy)) return;
@@ -664,11 +665,11 @@ void ts_vox_frame_blit(uint32_t dest, uint32_t argp) {
         if (n == 2000) {
             QueryPerformanceFrequency(&hz);
             fprintf(stderr, "[frames] %.2f ms between frame copies (HD voxels %s)\n",
-                    1000.0 * sum / hz.QuadPart / n, ts_vox_hd_on ? "on" : "off");
+                    1000.0 * sum / hz.QuadPart / n, HD_LIVE ? "on" : "off");
             sum = 0, n = 0;
         }
     }
-    if (!ts_vox_hd_on || dest != FRAME_SURF) return;
+    if (!HD_LIVE || dest != FRAME_SURF) return;
     if (!g_arena[0]) return;
     /* The frame surface gets more than one copy a frame: publish when this
      * frame recorded something, or after a few copies with nothing (no unit
@@ -706,7 +707,7 @@ void hdvox_compose(const uint8_t* frame16, int pitch, int w, int h, uint32_t* ou
             o0[2 * x] = o0[2 * x + 1] = o1[2 * x] = o1[2 * x + 1] = c;
         }
     }
-    if (!ts_vox_hd_on || !g_pub_lock_init) return;
+    if (!HD_LIVE || !g_pub_lock_init) return;
     EnterCriticalSection(&g_pub_lock);
     const uint8_t* p = g_arena[g_build ^ 1];
     size_t end = g_used[g_build ^ 1];

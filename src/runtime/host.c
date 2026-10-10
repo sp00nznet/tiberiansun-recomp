@@ -789,7 +789,7 @@ int host_frame(uint32_t* out, int maxw, int maxh, int* pw, int* ph) {
  * pictures. *pw, *ph get the game's (1x) size. */
 int host_frame_hd(uint32_t* out, int maxw, int maxh, int* pw, int* ph) {
     DDSURFACEDESC d;
-    if (!ts_vox_hd_on) return 0;
+    if (!ts_vox_hd_on || !ts_vox_hd_show) return 0;
     EnterCriticalSection(&g_primary_lock);
     if (!g_primary) { LeaveCriticalSection(&g_primary_lock); return 0; }
     memset(&d, 0, sizeof d);
