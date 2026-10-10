@@ -178,8 +178,8 @@ sudo apt install gcc-multilib cmake ninja-build pkg-config python3-pefile python
 `setup.sh` links `game/` to your install (it looks in your Steam libraries),
 catalogs, lifts and builds, and leaves `Tiberian Sun (recomp).sh`. By hand,
 it is *Step by step* with `python3` for `py -3` and `./build-linux.sh` for
-`build.cmd`, then `build-linux/ts --run`. It needs pcrecomp with win32hle's
-DirectDraw (pcrecomp #62).
+`build.cmd`, then `build-linux/ts --run`. It needs a current pcrecomp
+(`main`); `setup.sh` offers to update an older clone.
 
 The window scales like the Windows presenter: F12 cycles sharp, smooth, CRT,
 nearest and integer scaling, F11 (or Alt+Enter) is fullscreen, and
@@ -228,7 +228,7 @@ Wine, with any host flags after it (on a Mac, `CX_BOTTLE` picks the bottle,
 default `Steam`). `tools/playtest.py` and `tools/conformance.py` run the host
 through Wine off Windows (`TS_WINE` for another launcher).
 
-It needs pcrecomp's native32 with Wine support (pcrecomp #55), and the game
+It needs a current pcrecomp (`main`), whose native32 supports Wine, and the game
 folder's IPXEmu `wsock32.dll` for the LAN screen, which `play.sh` and the
 playtests tell Wine to load (`WINEDLLOVERRIDES=wsock32=n,b`). Under Wine 10.0
 on Debian 13 (x86-64) the playtest suite passes all 29 cases. Not yet under Wine:
@@ -300,8 +300,7 @@ Steps 5 and 6 above. `PCRECOMP` (environment, for `run_lift.py`) and
 checkout other than `..\tools`; the lifter and the runtime must come from
 the same tree. It builds from pcrecomp `main`, with MSVC or clang-cl (x86:
 `set CMAKE_ARGS=-DCMAKE_C_COMPILER=clang-cl -DCMAKE_C_FLAGS=-m32` and
-another `BUILD_DIR`; the suite passes on both). `--original` reaching a
-skirmish also needs pcrecomp #51.
+another `BUILD_DIR`; the suite passes on both).
 
 Contributions: [CONTRIBUTING.md](CONTRIBUTING.md).
 
