@@ -58,6 +58,10 @@ for comparison.
 | Native Linux (`build-linux/ts`, pcrecomp `win32hle`) | the same lift as a Linux program, no Wine: boot, menus and dialogs, campaigns, skirmishes to 4K, saves, HD vehicles; the playtest suite in Docker ([Linux, native](#linux-native)) |
 | Presenter (the default display) | the game in its own Direct3D 11 window, from redalert2-recomp: sharp scaling, blurred bars, clicks mapped into the game; checked with the menus ([presenter.md](docs/presenter.md)) |
 | HD vehicles | units, their shadows and voxel debris at 2x, Red Alert 2's four half-pixel passes found again in this renderer ([voxels.md](docs/voxels.md)) |
+| macOS and Linux, under Wine | the Windows build cross-compiled with clang-cl and xwin, played under Wine or CrossOver: 29 of 29 under Wine 10.0 ([macOS and Linux, under Wine](#macos-and-linux-under-wine)) |
+| Mods | a folder in `mods/`, laid over the game's without changing it, switched in game ([Mods](#mods)) |
+| Readable lifted C | 5,602 of 18,559 functions named from RTTI, vtables and the game's messages, each with a header ([Reading the lifted C](#reading-the-lifted-c)) |
+| Compilers | MSVC (x86), Visual Studio 2022 or 2026; clang-cl (x86) |
 
 Three walls so far, each in [bringup.md](docs/bringup.md): a gadget rect the
 game never initialised (a crash on a quarter of runs, from the first mouse
