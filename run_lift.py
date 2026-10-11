@@ -23,6 +23,7 @@ disassembler pass names them, and an unresolved slot answers eax = 0.
     py -3 run_lift.py --all
 """
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -267,6 +268,18 @@ def exe_stamp(path):
     return int.from_bytes(head[nt + 8:nt + 12], 'little')
 
 
+def lifter_stamp():
+    """What a lift depends on besides the game: the toolkit's lifter and this
+    file's patches. Setup re-lifts when it differs from the one the lift wrote
+    (src/recomp/gen/lift_stamp.txt), so a lifter fix reaches an existing install:
+    a lift from before MMX paddusb was lifted drew every light as a black circle."""
+    h = hashlib.sha1()
+    for p in (os.path.join(_TOOLS, 'lift', 'lift32.py'), os.path.join(_TOOLS, 'lift', 'generate.py'),
+              os.path.abspath(__file__)):
+        h.update(open(p, 'rb').read().replace(b'\r\n', b'\n'))
+    return h.hexdigest()[:16]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--exe', default=EXE)
@@ -281,7 +294,14 @@ def main():
     # More entries a run found, on top of RUN_SEEDS (seed_from_log.py JSON).
     ap.add_argument('--seeds', default=os.path.join(_HERE, 'work', 'run_seeds.json'),
                     help='seed_from_log.py JSON of unresolved targets from runs')
+    ap.add_argument('--check', action='store_true',
+                    help='exit 0 if the lift is current (this lifter, these patches), 1 if not')
     args = ap.parse_args()
+    if args.check:
+        try:
+            sys.exit(0 if open(os.path.join(args.out, 'lift_stamp.txt')).read().strip() == lifter_stamp() else 1)
+        except OSError:
+            sys.exit(1)
     if not os.path.exists(args.catalog):
         sys.exit('no catalog at %s -- run disasm32.py first (README, Step by step)' % args.catalog)
 
@@ -461,6 +481,7 @@ def main():
     stats = {'lifted': len(chosen), 'stubs': len(stubs), 'errors': errors,
              'no_terminator': dirty, 'files': idx, 'lines': lines}
     json.dump(stats, open(STATS, 'w'), indent=1)
+    open(os.path.join(args.out, 'lift_stamp.txt'), 'w').write(lifter_stamp() + '\n')
     print('=' * 60)
     print('  lifted %d   not-lifted stubs %d   errors %d   no terminator %d'
           % (len(chosen), len(stubs), errors, dirty))

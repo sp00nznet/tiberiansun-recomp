@@ -134,8 +134,11 @@ fi
 # windows; under Wine, callbacks into lifted code need DEP turned on and a
 # fetch that Wine reports as a read accepted (runtime/native32/native32.c).
 # An older clone has neither: it is updated (pcrecomp's main has both).
+# And a lifter with MMX paddusb (without it every light draws as a black
+# circle) and a sar that sign-extends byte and word operands, the later of the two.
 toolkit_ok() {
   grep -q SetProcessDEPPolicy "$PCRECOMP/runtime/native32/native32.c" &&
+    grep -q 'int{w}_t' "$PCRECOMP/tools/lift/lift32.py" &&
     { [ "$NATIVE" != 1 ] || [ -f "$PCRECOMP/runtime/win32hle/ddraw.c" ]; }
 }
 if ! toolkit_ok && [ -d "$PCRECOMP/.git" ]; then
@@ -206,19 +209,25 @@ if done_already work/functions.json; then say "  done (skipping)"; else
   grep -E "Functions:|coverage" work/disasm.log
 fi
 step "Lifting the game to C (5 to 15 minutes)"
-if done_already src/recomp/gen/recomp_dispatch.c; then say "  done (skipping)"; else
+# A lift made by an older lifter (or older patches) is made again, and so is
+# the build from it (run_lift.py --check).
+relifted=0
+if done_already src/recomp/gen/recomp_dispatch.c && "$PY" run_lift.py --check; then
+  say "  done (skipping)"
+else
   "$PY" run_lift.py --all > work/lift.log 2>&1 || fail "see work/lift.log"
   grep "lifted" work/lift.log | tail -1
+  relifted=1
 fi
 if [ "$NATIVE" = 1 ]; then
   step "Building build-linux/ts (5 to 20 minutes)"
-  if done_already build-linux/ts; then say "  done (skipping)"; else
+  if [ "$relifted" = 0 ] && done_already build-linux/ts; then say "  done (skipping)"; else
     [ "$FORCE" = 1 ] && rm -rf build-linux
     ./build-linux.sh > work/build-linux.log 2>&1 || fail "the build failed: see work/build-linux.log"
   fi
 else
   step "Building build/ts.exe (10 to 30 minutes)"
-  if done_already build/ts.exe; then say "  done (skipping)"; else
+  if [ "$relifted" = 0 ] && done_already build/ts.exe; then say "  done (skipping)"; else
     [ "$FORCE" = 1 ] && rm -rf build
     ./build.sh > work/build.log 2>&1 || fail "the build failed: see work/build.log"
   fi
