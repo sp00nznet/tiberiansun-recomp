@@ -111,9 +111,10 @@ sentence; the details are in `setup.log`. It has been run end to end from a
 clean folder.
 
 To update, get this repository again (or `git pull`), `git pull` the
-pcrecomp toolkit, and run Setup again: when the lifter or its patches have
-changed it lifts and builds again, since a fix to the lifter only reaches the
-game through a new lift.
+pcrecomp toolkit, and run Setup again. It always builds again, compiling
+only what changed, and when the lifter or its patches have changed it lifts
+again first, since a fix to the lifter only reaches the game through a new
+lift.
 
 It ends with `Tiberian Sun (recomp).cmd` in this folder: double-click it to
 play. F10 opens the settings.

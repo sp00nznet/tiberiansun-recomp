@@ -209,28 +209,23 @@ if done_already work/functions.json; then say "  done (skipping)"; else
   grep -E "Functions:|coverage" work/disasm.log
 fi
 step "Lifting the game to C (5 to 15 minutes)"
-# A lift made by an older lifter (or older patches) is made again, and so is
-# the build from it (run_lift.py --check).
-relifted=0
+# A lift made by an older lifter (or older patches) is made again
+# (run_lift.py --check).
 if done_already src/recomp/gen/recomp_dispatch.c && "$PY" run_lift.py --check; then
   say "  done (skipping)"
 else
   "$PY" run_lift.py --all > work/lift.log 2>&1 || fail "see work/lift.log"
   grep "lifted" work/lift.log | tail -1
-  relifted=1
 fi
 if [ "$NATIVE" = 1 ]; then
   step "Building build-linux/ts (5 to 20 minutes)"
-  if [ "$relifted" = 0 ] && done_already build-linux/ts; then say "  done (skipping)"; else
-    [ "$FORCE" = 1 ] && rm -rf build-linux
-    ./build-linux.sh > work/build-linux.log 2>&1 || fail "the build failed: see work/build-linux.log"
-  fi
+  # always: the build only compiles what changed, so a pulled fix reaches it
+  [ "$FORCE" = 1 ] && rm -rf build-linux
+  ./build-linux.sh > work/build-linux.log 2>&1 || fail "the build failed: see work/build-linux.log"
 else
   step "Building build/ts.exe (10 to 30 minutes)"
-  if [ "$relifted" = 0 ] && done_already build/ts.exe; then say "  done (skipping)"; else
-    [ "$FORCE" = 1 ] && rm -rf build
-    ./build.sh > work/build.log 2>&1 || fail "the build failed: see work/build.log"
-  fi
+  [ "$FORCE" = 1 ] && rm -rf build
+  ./build.sh > work/build.log 2>&1 || fail "the build failed: see work/build.log"
 fi
 if [ "$NATIVE" = 1 ]; then
   launcher="Tiberian Sun (recomp).sh"

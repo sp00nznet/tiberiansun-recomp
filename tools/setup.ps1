@@ -180,23 +180,20 @@ else {
 
 # ---------------------------------------------------------------- lift
 Step 5 "Lifting the game to C (5 to 15 minutes)"
-# A lift made by an older lifter (or older patches) is made again, and so is
-# the build from it (run_lift.py --check).
+# A lift made by an older lifter (or older patches) is made again
+# (run_lift.py --check).
 $env:PCRECOMP = $Toolkit
-$relifted = $false
 if ((Test-Path 'src\recomp\gen\recomp_dispatch.c') -and -not $Force -and
     (Exec ($pyargs + @('run_lift.py', '--check'))) -eq 0) { Say "  Already done (skipping)." }
 else {
   Run "Lifting" ($pyargs + @('run_lift.py', '--all'))
-  $relifted = $true
 }
 
 # ---------------------------------------------------------------- build
 Step 6 "Building build\ts.exe (10 to 30 minutes)"
-if ((Test-Path 'build\ts.exe') -and -not $Force -and -not $relifted) { Say "  Already done (skipping)." }
-else {
-  Run "Compiling" @('cmd', '/c', (Join-Path $Root 'build.cmd'))
-}
+# Always: the build only compiles what changed (seconds when nothing did), so
+# a pulled fix to the host reaches ts.exe.
+Run "Compiling" @('cmd', '/c', (Join-Path $Root 'build.cmd'))
 
 # ---------------------------------------------------------------- shortcut
 Step 7 "Making the shortcut"
