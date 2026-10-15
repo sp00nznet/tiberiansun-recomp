@@ -124,11 +124,11 @@ play. F10 opens the settings.
 Prerequisites: Windows 10/11, **Python 3.10+** (`py -3 --version`), **git**,
 **Visual Studio 2022** (any edition, or the Build Tools) with *Desktop
 development with C++* including the x86 tools, **CMake 3.20+** and **Ninja**,
-and the pcrecomp toolkit cloned **beside** this repository as `tools`:
+and the pcrecomp toolkit cloned **beside** this repository:
 
 ```
 some-folder\
-  tools\          <- git clone https://github.com/sp00nznet/pcrecomp tools
+  pcrecomp\       <- git clone https://github.com/sp00nznet/pcrecomp
   tiberiansun\    <- this repository
 ```
 
@@ -142,13 +142,13 @@ some-folder\
    ```
 3. Headers, imports and C++ classes (seconds):
    ```
-   py -3 ..\tools\tools\pe\pe_analyze.py game\Game.exe --json work\pe_analysis.json
-   py -3 ..\tools\tools\cpp\rtti.py game\Game.exe -o work\rtti.json --seeds work\rtti_seeds.json
+   py -3 ..\pcrecomp\tools\pe\pe_analyze.py game\Game.exe --json work\pe_analysis.json
+   py -3 ..\pcrecomp\tools\cpp\rtti.py game\Game.exe -o work\rtti.json --seeds work\rtti_seeds.json
    ```
    Expected from `rtti.py`: `classes : 807` and `virtual methods : 5,226`.
 4. The function catalog (a few minutes):
    ```
-   py -3 ..\tools\tools\disasm\disasm32.py game\Game.exe -o work\functions.json --seed-functions work\rtti_seeds.json
+   py -3 ..\pcrecomp\tools\disasm\disasm32.py game\Game.exe -o work\functions.json --seed-functions work\rtti_seeds.json
    ```
    Expected: about `Functions: 18548` and `(92.0% of code range)`.
 5. Lift (a minute or two):
@@ -227,7 +227,7 @@ offers to download `xwin`'s release binary. Either way it asks before xwin
 downloads the x86 MSVC C runtime and Windows SDK from Microsoft (about 1 GB,
 under Microsoft's licence, into `~/.xwin`); finds `pefile` and `capstone` or
 puts them in a `.venv`; clones pcrecomp beside this folder as `pcrecomp` (or
-uses `../tools`, or `PCRECOMP`); finds the game in your CrossOver bottles or
+uses `PCRECOMP`, or `../tools` where an older setup put it); finds the game in your CrossOver bottles or
 Steam libraries; and then catalogs, lifts and builds as `Setup.cmd` does. It
 leaves a `Tiberian Sun (recomp)` launcher here (`.command` on a Mac, `.sh`
 on Linux).
@@ -307,7 +307,7 @@ in its `RECOMP_ENTER`, so a crash report's address finds the function.
 
 Steps 5 and 6 above. `PCRECOMP` (environment, for `run_lift.py`) and
 `-DPCRECOMP=` (CMake, through `CMAKE_ARGS` for `build.cmd`) point at a toolkit
-checkout other than `..\tools`; the lifter and the runtime must come from
+checkout other than `..\pcrecomp`; the lifter and the runtime must come from
 the same tree. It builds from pcrecomp `main`, with MSVC or clang-cl (x86:
 `set CMAKE_ARGS=-DCMAKE_C_COMPILER=clang-cl -DCMAKE_C_FLAGS=-m32` and
 another `BUILD_DIR`; the suite passes on both).
