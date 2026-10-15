@@ -16,7 +16,7 @@ The build: the Steam release of *Command & Conquer: Tiberian Sun* with
 | Default resolution | 640x400 (`SUN.INI` `[Video]`) | 800x600 menus |
 
 ```
-$ py -3 ..\tools\tools\cpp\rtti.py game\Game.exe -o work\rtti.json --seeds work\rtti_seeds.json
+$ py -3 ..\pcrecomp\tools\cpp\rtti.py game\Game.exe -o work\rtti.json --seeds work\rtti_seeds.json
 [*] complete object locators : 895
 [*] vtables          : 895
 [*] classes          : 807

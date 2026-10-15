@@ -5,12 +5,19 @@
 # It copies your install into game\, analyses Game.exe, builds the function
 # catalog, lifts it to C, builds the 32-bit host and leaves a shortcut. Each
 # step is skipped when its output already exists (-Force redoes them).
-# Everything it does goes to setup.log.
-param([switch]$Force, [string]$Game = "")
+# Everything it does goes to setup.log. -Yes installs what is missing without
+# asking; -Game (or -GameDir) is the install to copy, found in Steam when not
+# given. RECOMP_LAUNCHER=1 (the recomp launcher) skips the "Press Enter" at the end.
+param([switch]$Force, [switch]$Yes, [Alias('GameDir')][string]$Game = "")
 
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
-$Toolkit = Join-Path (Split-Path -Parent $Root) 'tools'
+# The toolkit: PCRECOMP, else ../pcrecomp, else ../tools (where older setups
+# put it), else ../pcrecomp is cloned.
+$Parent = Split-Path -Parent $Root
+$Toolkit = if ($env:PCRECOMP) { $env:PCRECOMP }
+  elseif (-not (Test-Path (Join-Path $Parent 'pcrecomp')) -and (Test-Path (Join-Path $Parent 'tools\runtime\native32'))) { Join-Path $Parent 'tools' }
+  else { Join-Path $Parent 'pcrecomp' }
 $T = Join-Path $Toolkit 'tools'
 $Log = Join-Path $Root 'setup.log'
 Set-Location $Root
@@ -20,13 +27,14 @@ function Log($t) { try { Add-Content -Path $Log -Value $t -Encoding UTF8 -ErrorA
 Log "==== setup $(Get-Date -Format s)"
 
 function Say($t, $c = 'Gray') { Write-Host $t -ForegroundColor $c; Log $t }
+function Pause-End { if (-not $env:RECOMP_LAUNCHER) { Pause-End } }
 function Step($n, $t) { Write-Host ""; Say "[$n/7] $t" 'Cyan' }
 function Fail($t) {
   Say "" ; Say "Setup stopped: $t" 'Red'
   Say "The details are in $Log. Fix that and run Setup.cmd again; finished steps are skipped." 'Yellow'
-  Read-Host "Press Enter to close" | Out-Null; exit 1
+  Pause-End; exit 1
 }
-function Ask($q) { $a = Read-Host "$q [Y/n]"; return -not ($a -match '^[nN]') }   # Enter = yes
+function Ask($q) { if ($Yes) { Say "$q yes"; return $true }; $a = Read-Host "$q [Y/n]"; return -not ($a -match '^[nN]') }   # Enter = yes
 function Refresh-Path {
   $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
 }
@@ -110,7 +118,16 @@ Say "  pcrecomp: $Toolkit"
 # of its own, so this says what to install rather than installing it.
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
 $vs = if (Test-Path $vswhere) { (& $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath) } else { $null }
-if (-not $vs) { Fail "Visual Studio 2022 (or its Build Tools) with 'Desktop development with C++' is needed. Install it, then run Setup.cmd again." }
+if (-not $vs) {
+  Say "  Visual Studio 2022 with the C++ tools is not installed."
+  if (-not (Ask "  Install the Visual Studio 2022 Build Tools with the C++ workload now (winget, about 3 GB, asks for admin)?")) {
+    Fail "Visual Studio 2022 (or its Build Tools) with 'Desktop development with C++' is needed. Install it, then run Setup.cmd again."
+  }
+  Exec @('winget', 'install', '-e', '--id', 'Microsoft.VisualStudio.2022.BuildTools', '--accept-package-agreements', '--accept-source-agreements',
+         '--override', '--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended') | Out-Null
+  $vs = if (Test-Path $vswhere) { (& $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath) } else { $null }
+  if (-not $vs) { Fail "the Visual Studio Build Tools did not install. Install them with 'Desktop development with C++', then run Setup.cmd again." }
+}
 Say "  Visual Studio: $vs"
 # $tool, not $t: PowerShell names are case-insensitive, and $T is the toolkit path.
 foreach ($tool in @(@('cmake', 'Kitware.CMake', '30 MB'), @('ninja', 'Ninja-build.Ninja', '1 MB'))) {
@@ -153,6 +170,7 @@ if ((Test-Path 'game\Game.exe') -and -not $Force) {
     $Game = Find-Steam
     if ($Game) { Say "  Found it in your Steam library: $Game" }
   }
+  if (-not (Is-Install $Game) -and $Yes) { Fail "Tiberian Sun was not found in Steam. Give its folder with -Game." }
   while (-not (Is-Install $Game)) {
     $Game = (Read-Host "  Paste the folder Tiberian Sun is installed in (the one with Game.exe)").Trim('"', ' ')
     if (-not (Is-Install $Game)) { Say "  No Game.exe in that folder." 'Yellow' }
@@ -208,4 +226,4 @@ Say "  $lnk"
 Write-Host ""
 Say "Done. Double-click 'Tiberian Sun (recomp).cmd' to play." 'Green'
 Say "F10 opens the settings (scaling, fullscreen, HD vehicles, the game's resolution)."
-Read-Host "Press Enter to close" | Out-Null
+Pause-End
