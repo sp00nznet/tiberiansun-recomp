@@ -341,4 +341,4 @@ you.
 
 The code here is MIT ([LICENSE](LICENSE)). *Command & Conquer: Tiberian Sun*
 and *Firestorm* are © Westwood Studios / Electronic Arts; no game files are
-included or distributed.
+included or distributed ([NOTICE.md](NOTICE.md)).
