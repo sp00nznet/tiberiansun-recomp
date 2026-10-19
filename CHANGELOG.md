@@ -5,7 +5,22 @@ versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0-alpha.1] - 2026-10-19
+
+The first tagged build, for the installer.
+
 ### Added
+- **The installer** (`TS-Recomp-Installer`, on the releases for Windows,
+  Linux and macOS): finds the game in Steam, or you point it at the folder,
+  fetches this repo and pcrecomp, runs the setup with a progress bar and
+  leaves a Play button. It is
+  [recomp-launcher](https://github.com/sp00nznet/recomp-launcher) with
+  `launcher/launcher.json`, built by `.github/workflows/installer.yml`.
+  `tools/setup.ps1` takes `-Yes` and `-Game`, and `setup.sh` takes `--yes` and
+  `--game-dir` and numbers its steps (`[n/N]`) as `Setup.cmd` does. Both find
+  pcrecomp in `../pcrecomp` as well as `../tools`; `setup.sh` stops at a
+  Python venv it could not make, naming `python3-venv`; `Setup.cmd` installs
+  the Visual Studio Build Tools if they are missing, as redalert2-recomp's does.
 - **Mods**: a mod is a folder in `mods/`, laid over the game's folder without
   changing it (its files read first, what the game writes going into it, its
   maps and `expand*.mix` listed with the game's). `--mod NAME`; the settings

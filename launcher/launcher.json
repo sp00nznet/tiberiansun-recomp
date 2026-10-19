@@ -1,0 +1,21 @@
+{
+  "title": "Tiberian Sun & Firestorm",
+  "repo": "sp00nznet/tiberiansun-recomp",
+  "accent": "#3f9b3a",
+  "note": {
+    "windows": "The first build takes 30 to 60 minutes and about 6 GB. Python, CMake, Ninja and the Visual Studio Build Tools (about 3 GB) are installed if they are missing; Windows asks for permission once.",
+    "darwin": "On a Mac this builds the Windows game and plays it under CrossOver, with Tiberian Sun installed in a CrossOver bottle: pick its folder there. It needs Homebrew, and installs the rest with it. Building downloads Microsoft's C runtime and Windows SDK under Microsoft's licence (go.microsoft.com/fwlink/?LinkId=2086102); pressing Build accepts it. The first build takes 30 to 60 minutes and about 7 GB.",
+    "default": "The first build takes 30 to 60 minutes and about 6 GB. It needs 32-bit gcc and SDL2 from your package manager; if any are missing it says which, with the command to install them."
+  },
+  "game": {
+    "name": "Tiberian Sun",
+    "files": ["Game.exe"],
+    "steam": "Command & Conquer Tiberian Sun"
+  },
+  "sources": [{ "repo": "sp00nznet/pcrecomp", "ref": "main", "dir": "pcrecomp" }],
+  "setup": {
+    "windows": ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "tools\\setup.ps1", "-Yes", "-Game", "{game}"],
+    "default": ["bash", "setup.sh", "--yes", "--game-dir", "{game}"]
+  },
+  "play": "* (recomp).*"
+}

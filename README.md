@@ -1,5 +1,7 @@
 # Tiberian Sun and Firestorm — Static Recompilation
 
+**[⬇ Download the installer](https://github.com/sp00nznet/tiberiansun-recomp/releases)**: Windows, Linux and macOS. You need your own copy of the game.
+
 Static recompilation of **Command & Conquer: Tiberian Sun** and its expansion
 **Firestorm** (Westwood Studios, 1999–2000) from the shipping Win32 binary,
 `Game.exe`, to native C. The goal past running it is the same remaster
@@ -96,6 +98,22 @@ you. The lifted C is generated on your machine from your copy and is never
 distributed. On Linux, see [Linux, native](#linux-native); on macOS,
 [macOS and Linux, under Wine](#macos-and-linux-under-wine).
 
+### The installer (easiest)
+
+1. Download the one for your system from the
+   **[releases](https://github.com/sp00nznet/tiberiansun-recomp/releases)**:
+   `TS-Recomp-Installer-windows-x64.exe`, `-linux-x64.tar.gz` or
+   `-macos-arm64.zip`.
+2. Open it. It finds your game in Steam, or you point it at the folder.
+3. Press **Build my recomp**, and when it's done, **Play**.
+
+The first build takes 30 to 60 minutes and about 6 GB; it installs the tools
+it needs (on Windows, Visual Studio's Build Tools, asking for permission
+once). On a Mac it builds the Windows game for CrossOver, with the game
+installed in a CrossOver bottle. The installers aren't signed yet: on
+Windows, SmartScreen asks first (**More info**, then **Run anyway**); on a
+Mac, right-click it and pick **Open**.
+
 ### Quick start
 
 1. Download this repository (the green **Code** button, then **Download ZIP**)
@@ -103,7 +121,7 @@ distributed. On Linux, see [Linux, native](#linux-native); on macOS,
 2. Double-click **`Setup.cmd`**.
 
 It checks for Python 3.10+, the `pefile` and `capstone` packages, the pcrecomp
-toolkit, Visual Studio 2022 with the C++ x86 tools, CMake and Ninja, and
+toolkit, Visual Studio 2019 or later with the C++ x86 tools, CMake and Ninja, and
 **asks** before installing anything. It finds the game in your Steam library or
 asks for the folder, copies it into `game\`, builds the function catalog,
 lifts and builds. A rerun skips finished steps. If it stops, it says why in one
