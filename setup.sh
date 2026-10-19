@@ -131,15 +131,16 @@ if [ ! -d "$PCRECOMP/runtime/native32" ]; then
   git clone https://github.com/sp00nznet/pcrecomp "$PCRECOMP"
 fi
 # The native host is the lifted game on win32hle's DirectDraw, DirectSound and
-# windows; under Wine, callbacks into lifted code need DEP turned on and a
-# fetch that Wine reports as a read accepted (runtime/native32/native32.c).
+# windows, with its guest memory (guest_mem.c, which the Blowfish object is
+# allocated from); under Wine, callbacks into lifted code need DEP turned on
+# and a fetch that Wine reports as a read accepted (runtime/native32/native32.c).
 # An older clone has neither: it is updated (pcrecomp's main has both).
 # And a lifter with MMX paddusb (without it every light draws as a black
 # circle) and a sar that sign-extends byte and word operands, the later of the two.
 toolkit_ok() {
   grep -q SetProcessDEPPolicy "$PCRECOMP/runtime/native32/native32.c" &&
     grep -q 'int{w}_t' "$PCRECOMP/tools/lift/lift32.py" &&
-    { [ "$NATIVE" != 1 ] || [ -f "$PCRECOMP/runtime/win32hle/ddraw.c" ]; }
+    { [ "$NATIVE" != 1 ] || [ -f "$PCRECOMP/runtime/win32hle/guest_mem.c" ]; }
 }
 if ! toolkit_ok && [ -d "$PCRECOMP/.git" ]; then
   say "  $PCRECOMP is older than this build needs."
