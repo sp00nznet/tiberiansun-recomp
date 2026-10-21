@@ -5,6 +5,29 @@ versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0-alpha.2] - 2026-10-21
+
+### Added
+- **The F10 settings menu on Linux**, the Windows presenter's, drawn over the
+  picture by pcrecomp's win32hle: scaling, the bars, fullscreen, HD vehicles,
+  the game's resolution and the mod. HD vehicles in a window are F10's to
+  switch, on unless `ts.ini` says `hdvoxels=0`, as on Windows. Needs a
+  pcrecomp with `hle_screen_desktop`; `setup.sh` updates an older clone.
+- **More resolutions** in F10's list, on both hosts
+  (`src/runtime/resolutions.h`): 21:9 (1720x720, 2560x1080, 3440x1440,
+  3840x1600) and 16:10 (1680x1050, 2560x1600); on Linux the display's own
+  size too. Each is a skirmish in the playtest suite.
+- **The game's own Options screen** lists the large resolutions on Linux:
+  the host adds `[Video] AllowHiResModes=yes` to `SUN.INI` when it is missing
+  (a `no` stays). Without it the game lists only 640, 800 and 1024 wide.
+
+### Fixed
+- **A freeze in battle**: the line clipper (`0x006A8870`) could loop forever
+  on a line through a corner of its rect, one rounding error outside one edge
+  then the other. A clip now gives up after 64 rounds and the line goes
+  undrawn for that frame (`run_lift.py` PATCHES). The shipping game has the
+  same hang; found in Red Alert 2 by @andersbusk (redalert2-recomp #20).
+
 ## [0.1.0-alpha.1] - 2026-10-19
 
 The first tagged build, for the installer.

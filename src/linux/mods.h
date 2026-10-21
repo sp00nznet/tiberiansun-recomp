@@ -8,3 +8,6 @@
 void mods_start(const char *game_dir, const char *requested, const char *remembered,
                 int argc, char **argv, void (*save)(void), int (*can_switch)(void));
 const char *mods_active(void);   /* "" when none */
+int  mods_list(char names[][128], int max);   /* the mods in mods/<game> */
+void mods_restart_with(const char *name);     /* "" for none; does not return if it starts */
+int  mods_can_switch(void);                   /* a restart loses nothing now (not in a battle) */

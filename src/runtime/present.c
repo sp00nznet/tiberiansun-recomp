@@ -28,6 +28,7 @@
 
 #include "input.h"
 #include "present.h"
+#include "resolutions.h"
 #include "hdvox.h"
 #include "mods.h"
 
@@ -414,20 +415,11 @@ static void settings_save(HWND hw) {
     }
 }
 
-/* The game's own resolution: SUN.INI [Video] for the next start, and the
- * options in memory (OptionsClass at 0x7E4720, width +0x1C and height +0x20:
- * sub_00589C10 reads them from [Video] and sub_0058A140 writes them back) so
- * the next game opens at it and the game's own save on exit does not put the
- * old one back. The memory is only written while it holds a plausible
- * resolution. */
-#define GAME_OPTIONS 0x7E4720u
-#define OPT_W ((volatile int32_t*)(uintptr_t)(GAME_OPTIONS + 0x1C))
-#define OPT_H ((volatile int32_t*)(uintptr_t)(GAME_OPTIONS + 0x20))
-static const int k_res[][2] = { { 800, 600 }, { 1024, 768 }, { 1280, 720 }, { 1366, 768 }, { 1600, 900 },
-                                { 1920, 1080 }, { 2560, 1440 }, { 3840, 2160 } };
-#define NRES ((int)(sizeof k_res / sizeof k_res[0]))
+/* The game's own resolution (resolutions.h). */
+#define OPT_W ((volatile int32_t*)(uintptr_t)TS_OPT_W_VA)
+#define OPT_H ((volatile int32_t*)(uintptr_t)TS_OPT_H_VA)
 
-static int opt_ok(void) { return GAME_OPTIONS && *OPT_W >= 320 && *OPT_W <= 8192 && *OPT_H >= 200 && *OPT_H <= 8192; }
+static int opt_ok(void) { return res_plausible(*OPT_W, *OPT_H); }
 
 static void set_game_resolution(int w, int h) {
     char path[MAX_PATH], v[16];

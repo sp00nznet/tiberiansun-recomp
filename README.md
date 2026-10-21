@@ -26,9 +26,10 @@ for comparison.
   sharp at any size.
 - **Scaling** (F12): sharp-bilinear (the default), smooth, CRT, nearest, or
   whole multiples only.
-- **A settings menu** (F10): scaling, fullscreen, HD vehicles and the game's
-  resolution, kept in `build\ts.ini`.
-- **High resolution and widescreen**: 1280x720 up to 3840x2160 in game, more
+- **A settings menu** (F10, on Windows and native Linux): scaling, fullscreen,
+  HD vehicles and the game's resolution, kept in `build\ts.ini`.
+- **High resolution and widescreen**: 1280x720 up to 3840x2160 in game, 21:9
+  and 16:10 included, more
   of the battlefield on screen; above 1080 lines the sidebar needed a fix
   (docs/hires.md).
 - **Framed menus**: the 640x400 menus in a widescreen window sit on a blur of
@@ -52,7 +53,7 @@ for comparison.
 | The build | the Steam release in *The Ultimate Collection*: `Game.exe`, 2000-06-05, no DRM ([RECON.md](docs/RECON.md)) |
 | RTTI class recovery | 807 classes, 895 vtables, 5,226 virtual methods |
 | Function catalog (`disasm32`) | 18,552 functions, 92.0% of `.text` |
-| Lift (`run_lift.py --all`) | 18,559 functions, 3.9M lines of C, **0 lift errors**; 45 patches |
+| Lift (`run_lift.py --all`) | 18,559 functions, 3.9M lines of C, **0 lift errors**; 48 patches |
 | Host (`build/ts.exe`, 32-bit, pcrecomp `native32`) | the logos, the Tiberian Sun / Firestorm choice, both main menus, skirmishes, the GDI and Nod campaigns of both games with their VQA movies, and building and training in a mission ([bringup.md](docs/bringup.md)) |
 | High resolution | 720p, 1080p, 1440p and 4K in game; above 1080 lines the sidebar needed a fix ([hires.md](docs/hires.md)) |
 | Playtest suite (`tools/playtest.py`) | **29 cases**: every main-menu entry (LAN, Internet and World Domination Tour as far as they go without servers, Back, Exit) and the Options screens, save and load, skirmish 640x400 to 4K, the four campaigns, a base built and an infantryman trained in a mission and in a skirmish (the MCV deployed), band selection and force-fire, HD vehicles and voxel debris on; all pass, three at a time ([testing.md](docs/testing.md)) |
@@ -210,8 +211,12 @@ it is *Step by step* with `python3` for `py -3` and `./build-linux.sh` for
 (`main`); `setup.sh` offers to update an older clone.
 
 The window scales like the Windows presenter: F12 cycles sharp, smooth, CRT,
-nearest and integer scaling, F11 (or Alt+Enter) is fullscreen, and
-`build-linux/ts.ini` remembers them (`--scale` on the command line).
+nearest and integer scaling, F11 (or Alt+Enter) is fullscreen, F10 opens the
+same settings menu (scaling, the bars, fullscreen, HD vehicles, the game's
+resolution and the mod), and `build-linux/ts.ini` remembers them (`--scale`
+on the command line). The game's own Options screen lists the large
+resolutions too: the host adds `[Video] AllowHiResModes=yes` to `SUN.INI`
+when it isn't there.
 `--headless`, `--record`, `--mute`, `--hd-voxels`, `--seed` and the scripted
 input are the Windows host's; `tools/playtest.py` runs `build-linux/ts` when
 it is there. LAN games speak IPXEmu's protocol (IPX over UDP), the one the
@@ -224,7 +229,7 @@ files the Windows build writes.
 On Debian 13, headless in Docker, the playtest suite passes 29 of 29 (see the
 CHANGELOG for the run); it also runs in a window on an Xfce desktop with
 PulseAudio. Not on this host: `--original` (it runs the shipping machine code
-on Windows) and the F10 settings menu.
+on Windows).
 
 ### macOS and Linux, under Wine
 
@@ -301,11 +306,11 @@ MIX files, maps) in `mods/<name>/`: see [mods/README.md](mods/README.md). The ga
 folder is never changed. The mod's folder is laid over it, so the game reads
 the mod's file where it has one and its own where it does not, and what it
 writes while a mod is on (settings, saves) goes into the mod's folder.
-`--mod NAME` plays one (`--mod none`, none); on Windows the settings menu
-(F10) lists them, on Linux F9 Tried: a rules and art mod (Mistweaver's). steps through them, and either restarts the
-game with the one chosen and remembers it. Mods built on DLLs that patch
-`Game.exe`'s machine code (Ares, Phobos and the like) cannot work on a recompiled
-game. in the menus
+`--mod NAME` plays one (`--mod none`, none); the settings menu (F10) lists
+them, and on Linux F9 in the menus steps through them; either restarts the
+game with the one chosen and remembers it. Tried: a rules and art mod. Mods
+built on DLLs that patch `Game.exe`'s machine code (Ares, Phobos and the
+like) cannot work on a recompiled game.
 
 ### Reading the lifted C
 

@@ -12,11 +12,22 @@ and runs at it: the menus stay 640x400, centred, and the battlefield and
 sidebar take the whole screen. The game keeps the values in its options
 object at `0x007E4720` (width `+0x1C`, height `+0x20`; `sub_00589C10` reads
 them and `sub_0058A140` writes them back). The presenter's settings menu
-(F10) writes both, as it does in redalert2-recomp; that path has not been
-checked against this game in a window yet.
+(F10) writes both, as it does in redalert2-recomp, from the same list of
+sizes (`src/runtime/resolutions.h`): 16:9, 21:9 (1720x720, 2560x1080,
+3440x1440, 3840x1600) and 16:10 (1680x1050, 2560x1600), up to 4K; on Linux
+the display's own size as well.
 
-The playtest suite runs a skirmish at 1280x720, 1920x1080, 2560x1440 and
-3840x2160 (`skirmish-720p` .. `skirmish-4k`).
+The game's own Options screen lists only 640x480, 800x600 and 1024x768
+unless `[Video] AllowHiResModes=yes` is in `SUN.INI`; then every mode the
+display offers. On Linux the host adds that key when it isn't there (a `no`
+you set stays), and win32hle offers the sizes above and the display's. On
+Windows the modes are your display's, which can be larger than the
+presenter shows, so the key is left to you and F10 is the way past
+1024x768.
+
+The playtest suite runs a skirmish at each of 1280x720, 1720x720, 1920x1080,
+2560x1080, 2560x1440, 2560x1600, 3440x1440, 3840x1600 and 3840x2160
+(`skirmish-720p` .. `skirmish-4k`).
 
 ## The sidebar's buttons
 

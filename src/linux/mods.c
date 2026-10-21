@@ -52,7 +52,7 @@ __attribute__((constructor)) static void remember_start_dir(void) {
 const char *mods_active(void) { return g_active; }
 
 /* The mods there are now, sorted: each a folder in mods/<game>. */
-static int list_mods(char names[][128], int max) {
+int mods_list(char names[][128], int max) {
     DIR *d = opendir(g_root);
     int n = 0;
     struct dirent *e;
@@ -93,6 +93,14 @@ static void restart_with(const char *name) {
     fprintf(stderr, "[mods] could not restart: %s\n", strerror(errno));
 }
 
+void mods_restart_with(const char *name) {
+    snprintf(g_active, sizeof g_active, "%s", name);
+    if (g_save) g_save();                     /* remembered for the next start */
+    restart_with(g_active);
+}
+
+int mods_can_switch(void) { return !g_can_switch || g_can_switch(); }
+
 /* F9: the next mod (after the last, none), in the menus only. */
 static int on_key(int scancode, int down) {
     if (scancode != SDL_SCANCODE_F9) return 0;
@@ -102,12 +110,10 @@ static int on_key(int scancode, int down) {
         return 1;
     }
     static char names[MAX_MODS][128];
-    int n = list_mods(names, MAX_MODS), at = -1;
+    int n = mods_list(names, MAX_MODS), at = -1;
     for (int i = 0; i < n; i++)
         if (!strcasecmp(names[i], g_active)) at = i;
-    snprintf(g_active, sizeof g_active, "%s", at + 1 < n ? names[at + 1] : "");
-    if (g_save) g_save();                     /* remembered for the next start */
-    restart_with(g_active);
+    mods_restart_with(at + 1 < n ? names[at + 1] : "");
     return 1;
 }
 

@@ -97,6 +97,14 @@ PATCHES = {
     # as "Seed is %08x"), so a skirmish starts differently every run. The
     # host's --seed N fixes it, for tests that click on a unit.
     0x004E3A61: '{ extern uint32_t ts_seed; if (ts_seed) eax = ts_seed; } /* host --seed */',
+    # The Cohen-Sutherland line clipper (0x006A8870), Red Alert 2's own (its
+    # issue #20): a line through a rect corner can leave the clipped point a
+    # rounding error outside one edge, then the other, forever. A correct clip
+    # ends within 8 rounds; past 64 the line is rejected, as one wholly
+    # outside is, and goes undrawn for that frame.
+    0x006A898E: '{ extern unsigned ts_clip_rounds; if (++ts_clip_rounds > 64) goto L_006A8B2C; } /* line clip cap */',
+    0x006A8AE9: '{ extern unsigned ts_clip_rounds; ts_clip_rounds = 0; } /* line clip cap */',
+    0x006A8B2C: '{ extern unsigned ts_clip_rounds; ts_clip_rounds = 0; } /* line clip cap */',
 }
 
 

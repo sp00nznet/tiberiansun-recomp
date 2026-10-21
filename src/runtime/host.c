@@ -1111,6 +1111,7 @@ static native32_shim_t g_headless_shims[] = {
  * (a cdecl va_list on x86 is a pointer to the first variadic slot). */
 static int g_debuglog;
 uint32_t ts_seed;                 /* --seed N: the game's random seed (run_lift.py PATCHES) */
+unsigned ts_clip_rounds;          /* the line clipper's rounds (run_lift.py PATCHES) */
 
 /* --mute: this process's audio session at zero (Vista and later: waveOut's
  * volume is the session's, and DirectSound and Bink play in the same

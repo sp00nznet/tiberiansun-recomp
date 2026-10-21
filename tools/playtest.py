@@ -308,7 +308,10 @@ case('load-mission',
      log={'Tooltips are on.': 2})
 
 # High resolution: SUN.INI [Video], what the presenter's settings menu writes.
-for w, h, tag in ((1280, 720, '720p'), (1920, 1080, '1080p'), (2560, 1440, '1440p'), (3840, 2160, '4k')):
+# 21:9 and 16:10 as well, the sizes F10 offers.
+for w, h, tag in ((1280, 720, '720p'), (1720, 720, '1720x720'), (1920, 1080, '1080p'), (2560, 1080, '2560x1080'),
+                  (2560, 1440, '1440p'), (2560, 1600, '1600p'), (3440, 1440, '3440x1440'),
+                  (3840, 1600, '3840x1600'), (3840, 2160, '4k')):
     case('skirmish-' + tag, firestorm((w, h)).click(*MENU_SKIRMISH, after=4).press(SKIRMISH, 'OK'), 180,
          dialogs=[SKIRMISH], ingame=True, size=(w, h),
          ini={'Video': {'ScreenWidth': str(w), 'ScreenHeight': str(h)}})
