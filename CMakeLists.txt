@@ -37,9 +37,19 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(HLE ${PCRECOMP}/runtime/win32hle)
   file(GLOB HLE_SOURCES CONFIGURE_DEPENDS "${HLE}/*.c")
   list(FILTER HLE_SOURCES EXCLUDE REGEX "_selftest\.c$")
-  add_executable(ts src/linux/main.c src/linux/blowfish.c src/linux/script.c src/linux/mods.c src/linux/menu.c src/runtime/hdvox.c ${HLE_SOURCES} ${GEN_SOURCES})
+  add_executable(ts src/linux/main.c src/linux/blowfish.c src/linux/script.c src/linux/mods.c src/linux/menu.c src/runtime/hdvox.c src/runtime/bsurface.c ${HLE_SOURCES} ${GEN_SOURCES})
   target_include_directories(ts PRIVATE src/linux src/runtime src/recomp/gen ${HLE} ${PCRECOMP}/runtime/recomp32)
   target_compile_definitions(ts PRIVATE RECOMP_RETADDR=0u RECOMP_FLAT_MEMORY RECOMP_LOCAL_REGS)
+  # Faster lifted code (from redalert2-recomp: profiled by @vlad-artyomov, the
+  # x87 ring by @cpressland): indirect-call targets cached per call site and in
+  # one table (safe: win32hle runs one guest thread at a time), no icall trace
+  # ring, and the x87 stack as a ring (needs a lift that writes _ST(i)).
+  # -DTS_FAST_ICALLS=OFF for a crash report with the indirect-call ring.
+  option(TS_FAST_ICALLS "Cache indirect-call targets, x87 ring, drop the icall trace ring" ON)
+  if(TS_FAST_ICALLS)
+    target_compile_definitions(ts PRIVATE RECOMP_RESOLVE_CACHE=16384 RECOMP_ICALL_SITE_CACHE RECOMP_NO_ICALL_TRACE
+                                          RECOMP_X87_RING RECOMP_X87_LOCAL)
+  endif()
   set(GEN_OPT "-O2" CACHE STRING "optimisation for the generated C")
   set_source_files_properties(${GEN_SOURCES} PROPERTIES COMPILE_OPTIONS "-w;${GEN_OPT};-fno-strict-aliasing;-fwrapv")
   target_compile_options(ts PRIVATE -fno-strict-aliasing -fwrapv)
@@ -58,6 +68,7 @@ add_executable(ts
   src/runtime/oracle.c
   src/runtime/present.c
   src/runtime/hdvox.c
+  src/runtime/bsurface.c
   ${PCRECOMP}/runtime/native32/native32.c
   ${PCRECOMP}/runtime/recomp32/image_loader.c
   ${PCRECOMP}/runtime/recomp32/recomp_trace.c

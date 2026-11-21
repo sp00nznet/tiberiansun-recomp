@@ -5,6 +5,34 @@ versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-21
+
+### Changed
+- **Faster in battle with HD vehicles**: the voxel plotter's pixel reads run
+  natively for a plain surface, on both hosts. Found in Red Alert 2 by
+  @lynx8989 (redalert2-recomp#67), where it took 1440p from about 22 to 60 fps.
+- **Linux: faster lifted code.** Indirect calls cache their targets and the x87
+  stack is a ring (`-DTS_FAST_ICALLS=OFF` for a crash report with the
+  indirect-call ring). From Red Alert 2: profiled by @vlad-artyomov
+  (redalert2-recomp#65), the x87 ring by @cpressland (#66).
+- Lifted with current pcrecomp.
+
+### Fixed
+- **Windows: the Options screen's resolution list** could be empty on Windows
+  10 and 11, which enumerate no 16-bit modes on many displays. The host now
+  lists the sizes F10 offers. From @twessman-9's Red Alert 2 fix
+  (redalert2-recomp#43).
+- **Windows: no sound after a `--mute` run.** Windows kept the muted volume
+  for `ts.exe`; a run without `--mute` now restores it (@twessman-9, #43).
+- **Windows: the blurred bars** beside a 4:3 picture showed sharp, repeated
+  copies of it. They now blur from a small copy, as on Linux, with no loop for
+  Wine's shader compiler to fail on (redalert2-recomp#38).
+- **Linux: the mouse reaches the window's right and bottom edges**
+  when the picture is scaled, so the view scrolls right and down
+  (pcrecomp#195, by @cpressland).
+- **Setup: the toolkit is found** in `../pcrecomp` (and `../tools` where older
+  setups put it), so step 6 no longer fails to find `native32.c` (#2).
+
 ## [0.1.0-alpha.2] - 2026-10-21
 
 ### Added

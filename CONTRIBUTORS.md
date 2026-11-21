@@ -27,3 +27,17 @@ through Wine) is ported from the one he wrote for Red Alert 2
 for callbacks under Wine (sp00nznet/pcrecomp#55): Wine leaves DEP off, so the
 game's window and dialog procedures quietly ran its original machine code, and
 under Rosetta it reports an instruction fetch as a read.
+- **The x87 ring and the mouse at the window's edges**, from Red Alert 2
+  (redalert2-recomp#66, pcrecomp#195).
+
+### [@twessman-9](https://github.com/twessman-9)
+- **The Options resolution list and undoing `--mute`**, ported from their Red
+  Alert 2 fix (redalert2-recomp#43).
+
+### Vlad Artyomov ([@vlad-artyomov](https://github.com/vlad-artyomov))
+- **Profiled the lifted code** in big Red Alert 2 battles and found the
+  indirect-call lookups (redalert2-recomp#65); the cache is on here too.
+
+### [@lynx8989](https://github.com/lynx8989)
+- **The BSurface pixel fast path** (redalert2-recomp#67), ported here: the
+  voxel plotter's pixel reads answered natively.

@@ -109,6 +109,13 @@ PATCHES = {
     0x006A898E: '{ extern unsigned ts_clip_rounds; if (++ts_clip_rounds > 64) goto L_006A8B2C; } /* line clip cap */',
     0x006A8AE9: '{ extern unsigned ts_clip_rounds; ts_clip_rounds = 0; } /* line clip cap */',
     0x006A8B2C: '{ extern unsigned ts_clip_rounds; ts_clip_rounds = 0; } /* line clip cap */',
+    # Get_Pixel (Surface slot 10), which the voxel plotter calls twice per
+    # sample: answered natively for a plain BSurface (src/runtime/bsurface.c;
+    # @lynx8989's, from Red Alert 2). After its first instruction (eax =
+    # POINT*, ecx = this), returning as its own `ret 4` would.
+    0x006A7420: ('{ extern int ts_bsurf_getpixel(uint32_t, uint32_t, uint32_t*); uint32_t _px; '
+                 'if (ts_bsurf_getpixel(ecx, eax, &_px)) { eax = _px; RECOMP_FLAGS_OUT(); esp += 8; '
+                 '{ RECOMP_REGS_OUT(); return; } } } /* BSurface pixel read */'),
 }
 
 
